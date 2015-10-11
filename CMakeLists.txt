@@ -21,20 +21,25 @@ message(STATUS "Options - "
 
 set(SOURCES
     src/main.cpp
+    src/render/init.cpp
+    src/tools/log.cpp
 )
 
-set(AS_FLAGS "-Wall -std=c++11 -Wfatal-errors" )
+set(AS_FLAGS "-Wall -std=c++14 -Wfatal-errors" )
 
 ##################################
 # External libraries
 ##################################
 
 set(LIBS)
-set(INCPATHS)
+set(INCPATHS "${CMAKE_SOURCE_DIR}/src")
 
-set(SOURCES
-    src/main.cpp
-)
+# OpenGL stuff
+find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
+find_package(GLFW REQUIRED)
+list(APPEND LIBS ${OPENGL_LIBRARIES} ${GLFW_LIBRARIES} ${GLEW_LIBRARIES})
+list(APPEND INCPATHS ${OPENGL_INCLUDE_DIR} ${GLFW_INCLUDE_DIR} ${GLEW_INCLUDE_DIR})
 
 ##################################
 # Add git revision
