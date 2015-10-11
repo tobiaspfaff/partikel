@@ -6,10 +6,11 @@
 #include <string>
 #include <memory>
 
-class VertexBuffer {
+class VertexArray
+{
 public:
-	VertexBuffer();
-	~VertexBuffer();
+	VertexArray();
+	~VertexArray();
 	void bind();
 
 	unsigned int handle;

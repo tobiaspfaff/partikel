@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include "render/init.hpp"
 #include "render/shader.hpp"
+#include "render/vertexArray.hpp"
 
 using namespace std;
 
@@ -18,7 +19,10 @@ int main()
 		make_shared<VertexShader>("triangle_test.vs"),
 		make_shared<FragmentShader>("triangle_test.fs") );
 
+	auto vao = make_unique<VertexArray>();
+
 	program->use();
+	vao->bind();
 
 	while(window->poll()) 
 	{

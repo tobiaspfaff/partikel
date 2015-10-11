@@ -22,6 +22,7 @@ message(STATUS "Options - "
 set(SOURCES
     src/main.cpp
     src/render/init.cpp
+    src/render/vertexArray.cpp
     src/render/shader.cpp
     src/tools/log.cpp
 )

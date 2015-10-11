@@ -1,5 +1,6 @@
 // Vertex buffers
 
+#include <GL/glew.h>
 #include "render/vertexArray.hpp"
 
 using namespace std;

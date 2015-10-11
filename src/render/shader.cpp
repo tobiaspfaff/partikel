@@ -9,10 +9,11 @@ using namespace std;
 
 static unsigned int shaderLoad(const string& filename, GLenum type) 
 {
+	string filePath = "shader/" + filename;
 	unsigned int handle = glCreateShader(type);
 	
 	// load file into buffer
-	ifstream file(filename.c_str(), ios::in|ios::binary|ios::ate);
+	ifstream file(filePath.c_str(), ios::in|ios::binary|ios::ate);
   	if (!file.is_open()) 
   	{
   		fatalError("Failed to load shader "+filename);

@@ -8,11 +8,13 @@
 
 using namespace std;
 
-void error_callback(int error, const char* description) {
+void error_callback(int error, const char* description) 
+{
  	fatalError(description);
 }
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 
+{
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -37,7 +39,7 @@ GLWindow::GLWindow(const string& name)
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 	// Create the window and context
-	GLFWwindow* window = glfwCreateWindow(800, 600, name.c_str(), NULL, NULL);
+	window = glfwCreateWindow(800, 600, name.c_str(), NULL, NULL);
 	if(!window) 
 	{
 		fatalError("Can't create GLFW window");
