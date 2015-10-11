@@ -24,16 +24,25 @@ public:
 	FragmentShader(const std::string& filename);	
 };
 
+class GeometryShader : public Shader 
+{
+public:
+	GeometryShader(const std::string& filename);	
+};
+
 class ShaderProgram 
 {
 public:
-	ShaderProgram(std::shared_ptr<VertexShader> vs, std::shared_ptr<FragmentShader> fs);
+	ShaderProgram(std::shared_ptr<VertexShader> vs, 
+				  std::shared_ptr<FragmentShader> fs,
+				  std::shared_ptr<GeometryShader> gs = nullptr);
 	~ShaderProgram();
 	void use();
 
 	unsigned int handle;
 	std::shared_ptr<VertexShader> vs;
 	std::shared_ptr<FragmentShader> fs;
+	std::shared_ptr<GeometryShader> gs;
 };
 
 #endif

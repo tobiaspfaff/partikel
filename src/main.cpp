@@ -9,8 +9,16 @@ using namespace std;
 
 extern const char* git_version_short;
 
+struct VertexStruct {
+	float pos[4];	
+};
+
 int main() 
 {
+	float data[] = {  0.5, -0.25, 0.5, 1.0,
+                     -0.25, -0.25, 0.5, 1.0,
+                      0.25,  0.25, 0.5, 1.0 };
+
 	cout << "Partikel " << git_version_short << endl;
 
 	auto window = make_unique<GLWindow>("Partikel");
@@ -19,8 +27,11 @@ int main()
 		make_shared<VertexShader>("triangle_test.vs"),
 		make_shared<FragmentShader>("triangle_test.fs") );
 
-	auto vao = make_unique<VertexArray>();
-
+	auto vao = make_unique<SingleVertexArray<VertexStruct> >();
+	vao->buffer.setData((VertexStruct*) data, 3);
+	
+	vao->defineAttrib(0, GL_FLOAT, 4, offsetof(VertexStruct, pos));
+    
 	program->use();
 	vao->bind();
 
