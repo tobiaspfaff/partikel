@@ -1,10 +1,23 @@
 // Create GL window and context
 
-#include "render/init.hpp"
-#include "tools/log.hpp"
+#include <iostream>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include "render/init.hpp"
+#include "tools/log.hpp"
+
 using namespace std;
+
+void error_callback(int error, const char* description) {
+ 	fatalError(description);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	{
+		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
+}
 
 GLWindow::GLWindow(const string& name) 
 {
@@ -13,42 +26,45 @@ GLWindow::GLWindow(const string& name)
 	{
 		fatalError("Can't initialize GLFW");
 	}
+	glfwSetErrorCallback(error_callback);
 
-	/*
-	// Set the error callback, as mentioned above.
-	// glfwSetErrorCallback(error_callback);
-
-	// Set up OpenGL options.
-	// Use OpenGL verion 4.1,
+	// Use OpenGL 4.1
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-	// GLFW_OPENGL_FORWARD_COMPAT specifies whether the OpenGL context should be forward-compatible, i.e. one where all functionality deprecated in the requested version of OpenGL is removed.
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	// Indicate we only want the newest core profile, rather than using backwards compatible and deprecated features.
+	// Indicate we only want the newest core profile
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	// Make the window resize-able.
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-	// Create a window to put our stuff in.
-	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL", NULL, NULL);
-
-	// If the window fails to be created, print out the error, clean up GLFW and exit the program.
-	if(!window) {
-	  fprintf(stderr, "Failed to create GLFW window.");
-	  glfwTerminate();
-	  exit(EXIT_FAILURE);
+	// Create the window and context
+	GLFWwindow* window = glfwCreateWindow(800, 600, name.c_str(), NULL, NULL);
+	if(!window) 
+	{
+		fatalError("Can't create GLFW window");
 	}
-
-	// Use the window as the current context (everything that's drawn will be place in this window).
 	glfwMakeContextCurrent(window);
-
-	// Set the keyboard callback so that when we press ESC, it knows what to do.
 	glfwSetKeyCallback(window, key_callback);
 
-	printf("OpenGL version supported by this platform (%s): \n", glGetString(GL_VERSION));
+	cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
 
 	// Makes sure all extensions will be exposed in GLEW and initialize GLEW.
 	glewExperimental = GL_TRUE;
 	glewInit();
-	*/
+}
+
+void GLWindow::clearBuffer() 
+{
+	static const GLfloat green[] = { 0.0f, 0.25f, 0.0f, 1.0f };
+    glClearBufferfv(GL_COLOR, 0, green);
+}
+
+void GLWindow::swap() 
+{
+	glfwSwapBuffers(window);    
+}
+
+bool GLWindow::poll()
+{
+	glfwPollEvents();
+	return !glfwWindowShouldClose(window);
 }
