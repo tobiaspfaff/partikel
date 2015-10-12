@@ -5,6 +5,7 @@
 
 #include <string>
 #include <memory>
+#include "tools/vectors.hpp"
 
 class Shader 
 {	
@@ -38,6 +39,11 @@ public:
 				  std::shared_ptr<GeometryShader> gs = nullptr);
 	~ShaderProgram();
 	void use();
+	int uniform(const char* name);
+	void setUniform(int idx, float v);	
+	void setUniform(int idx, const Vec2& v);
+	void setUniform(int idx, const Vec3& v);
+	void setUniform(int idx, const Vec4& v);
 
 	unsigned int handle;
 	std::shared_ptr<VertexShader> vs;

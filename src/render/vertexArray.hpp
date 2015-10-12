@@ -59,7 +59,8 @@ template<class T>
 void VertexBuffer<T>::setData(const T* data, int num) 
 {
 	bind();
-	glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), nullptr, GL_STREAM_DRAW); // orphaning
+	glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), data, GL_STREAM_DRAW);
 }
 
 template<class T>
@@ -67,7 +68,7 @@ void SingleVertexArray<T>::defineAttrib(int index, GLenum type, int elements, si
 {
 	bind();
 	buffer.bind();
-	glVertexAttribPointer(index, elements, type, GL_FALSE, 0, (void*) offset);
+	glVertexAttribPointer(index, elements, type, GL_FALSE, sizeof(T), (void*) offset);
 	glEnableVertexAttribArray(index);
 }
 

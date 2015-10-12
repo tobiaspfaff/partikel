@@ -21,7 +21,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-GLWindow::GLWindow(const string& name) 
+GLWindow::GLWindow(const string& name, int width, int height) 
 {
 	// Initialize GLFW
 	if (!glfwInit()) 
@@ -30,7 +30,7 @@ GLWindow::GLWindow(const string& name)
 	}
 	glfwSetErrorCallback(error_callback);
 
-	// Use OpenGL 4.1
+	// Use OpenGL 4.3
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -39,7 +39,7 @@ GLWindow::GLWindow(const string& name)
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 	// Create the window and context
-	window = glfwCreateWindow(800, 600, name.c_str(), NULL, NULL);
+	window = glfwCreateWindow(width, height, name.c_str(), NULL, NULL);
 	if(!window) 
 	{
 		fatalError("Can't create GLFW window");
@@ -56,7 +56,7 @@ GLWindow::GLWindow(const string& name)
 
 void GLWindow::clearBuffer() 
 {
-	static const GLfloat green[] = { 0.0f, 0.25f, 0.0f, 1.0f };
+	static const GLfloat green[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     glClearBufferfv(GL_COLOR, 0, green);
 }
 

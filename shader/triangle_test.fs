@@ -1,8 +1,11 @@
 #version 410 core
 
 out vec4 color;
+in vec2 vertex_uv;
+in vec4 vertex_color;
+uniform sampler2D tex0;
 
 void main(void)
 {
-    color = vec4(0.0, 0.8, 1.0, 1.0);
+    color = texture(tex0, vertex_uv).rgba * vertex_color;
 }

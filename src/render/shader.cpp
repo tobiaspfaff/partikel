@@ -71,6 +71,16 @@ ShaderProgram::ShaderProgram(shared_ptr<VertexShader> vs,
 		glAttachShader(handle, gs->handle);	
 	}
 	glLinkProgram(handle);
+
+	int params = -1;
+    glGetProgramiv(handle, GL_LINK_STATUS, &params);
+    if (params != GL_TRUE) 
+    {
+    	string logBuffer(2048, '\0');
+		int actualLength = 0;
+		glGetProgramInfoLog(handle, logBuffer.size(), &actualLength, &logBuffer[0]);
+		fatalError("Vertex program link failed:\n" + logBuffer);
+    }
 }
 
 ShaderProgram::~ShaderProgram()
@@ -81,4 +91,29 @@ ShaderProgram::~ShaderProgram()
 void ShaderProgram::use() 
 {
 	glUseProgram(handle);
+}
+
+void ShaderProgram::setUniform(int idx, float v)
+{
+	glProgramUniform1f(handle, idx, v);
+}
+
+void ShaderProgram::setUniform(int idx, const Vec2& v)
+{
+	glProgramUniform2f(handle, idx, v.x, v.y);
+}
+
+void ShaderProgram::setUniform(int idx, const Vec3& v)
+{
+	glProgramUniform3f(handle, idx, v.x, v.y, v.z);
+}
+
+void ShaderProgram::setUniform(int idx, const Vec4& v)
+{
+	glProgramUniform4f(handle, idx, v.x, v.y, v.z, v.w);
+}
+
+int ShaderProgram::uniform(const char* name) 
+{
+	return glGetUniformLocation(handle, name);
 }

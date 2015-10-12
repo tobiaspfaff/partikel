@@ -11,7 +11,7 @@ class GLWindow
 {
 	GLFWwindow* window;
 public:
-	GLWindow(const std::string& name);
+	GLWindow(const std::string& name, int width, int height);
 	void clearBuffer();
 	void swap();
 	bool poll(); // return false if closed
