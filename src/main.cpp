@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <GL/glew.h>
+#include "render/colors.hpp"
 #include "render/init.hpp"
 #include "tools/vectors.hpp"
 #include "render/shader.hpp"
@@ -54,7 +55,8 @@ int main()
 			float mod = fmod(i+time,1000.0) / 1000.0f;
 			circle *= (float)sin(mod * M_PI * 2);
 			data[i].pos = elmult(screen, (circle + Vec2(1))) * 0.5f;		
-			data[i].color = Vec4(1,1,1,(i/(float)N));
+			Vec3 rgb = hsv2rgb(Vec3(mod, 1, 1));
+			data[i].color = Vec4(rgb.x, rgb.y, rgb.z, i/(float)N);
 		}
 		vao->buffer.setData(&data[0], N);
 

@@ -22,6 +22,7 @@ message(STATUS "Options - "
 set(SOURCES
     src/main.cpp
     src/dependencies/stb_image.cpp
+    src/render/colors.cpp
     src/render/init.cpp
     src/render/shader.cpp
     src/render/texture.cpp
