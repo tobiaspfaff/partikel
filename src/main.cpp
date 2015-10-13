@@ -3,8 +3,10 @@
 #include <vector>
 #include <GL/glew.h>
 #include "render/colors.hpp"
-#include "render/init.hpp"
+#include "render/window.hpp"
 #include "tools/vectors.hpp"
+#include "tools/log.hpp"
+#include "compute/computeMain.hpp"
 #include "render/shader.hpp"
 #include "render/texture.hpp"
 #include "render/vertexArray.hpp"
@@ -23,6 +25,51 @@ int main()
 	cout << "Partikel " << git_version_short << endl;
 
 	auto window = make_unique<GLWindow>("Partikel", 1000, 1000);
+
+	auto cl = make_unique<CLMaster>();
+
+	CLKernel kernel(*cl, "hello.cl", "hello");
+
+	/*
+	auto clHello = make_unique<CLProgram>(*clContext, "hello.cl");
+
+	int err;
+	const std::string hw("Hello World\n");
+	char* outH = new char[hw.length()+1];
+	cl::Buffer outCL (clContext->context, 
+					  CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, 
+					  hw.length() + 1,
+					  outH,
+					  &err);
+	if (err != CL_SUCCESS)
+		fatalError("can't create CL buffer");
+
+	err = kernel.setArg(0, outCL);
+	if (err != CL_SUCCESS)
+		fatalError("can't set args");
+
+	cl::Event event;
+	if (queue.enqueueNDRangeKernel(
+		kernel,
+		cl::NullRange,
+		cl::NDRange(hw.length()+1),
+		cl::NDRange(1, 1),
+		NULL,
+		&event) != CL_SUCCESS)
+		fatalError("can't enqueue");
+
+	event.wait();
+	err = queue.enqueueReadBuffer(
+		outCL,
+		CL_TRUE,
+		0,
+		hw.length()+1,
+		outH);
+	if (err != CL_SUCCESS)
+		fatalError("can't read buffer");
+	
+	cout << "returned: " << outH << endl;*/
+	exit(1);
 
 	auto program = make_unique<ShaderProgram>(
 		make_shared<VertexShader>("triangle_test.vs"),
@@ -44,6 +91,8 @@ int main()
 	const int N = 10000;
 	vector<VertexStruct> data(N);
 	
+	
+
 	float time = 0;
 	while(window->poll()) 
 	{

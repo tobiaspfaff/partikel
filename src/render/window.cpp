@@ -3,7 +3,7 @@
 #include <iostream>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include "render/init.hpp"
+#include "render/window.hpp"
 #include "tools/log.hpp"
 
 using namespace std;

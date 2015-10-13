@@ -21,9 +21,10 @@ message(STATUS "Options - "
 
 set(SOURCES
     src/main.cpp
+    src/compute/computeMain.cpp
     src/dependencies/stb_image.cpp
     src/render/colors.cpp
-    src/render/init.cpp
+    src/render/window.cpp
     src/render/shader.cpp
     src/render/texture.cpp
     src/render/vertexArray.cpp
@@ -39,12 +40,13 @@ set(AS_FLAGS "-Wall -std=c++14 -Wfatal-errors" )
 set(LIBS)
 set(INCPATHS "${CMAKE_SOURCE_DIR}/src")
 
-# OpenGL stuff
+# OpenGL/CL stuff
 find_package(OpenGL REQUIRED)
+find_package(OpenCL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(GLFW REQUIRED)
-list(APPEND LIBS ${OPENGL_LIBRARIES} ${GLFW_LIBRARIES} ${GLEW_LIBRARIES})
-list(APPEND INCPATHS ${OPENGL_INCLUDE_DIR} ${GLFW_INCLUDE_DIR} ${GLEW_INCLUDE_DIR})
+list(APPEND LIBS ${OPENGL_LIBRARIES} ${GLFW_LIBRARIES} ${GLEW_LIBRARIES} ${OpenCL_LIBRARIES})
+list(APPEND INCPATHS ${OPENGL_INCLUDE_DIR} ${GLFW_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${OpenCL_INCLUDE_DIRS})
 
 ##################################
 # Add git revision
@@ -77,6 +79,10 @@ if (DEBUG)
 else()
     SET(EXECCMD partikel)
     set(AS_FLAGS "${AS_FLAGS} -O3 -Wreturn-type" )
+endif()
+
+if(APPLE)
+    SET(AS_FLAGS "${AS_FLAGS} -DAPPLE")
 endif()
 
 add_executable(${EXECCMD} 
