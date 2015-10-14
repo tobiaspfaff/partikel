@@ -16,13 +16,13 @@ using namespace std;
 extern const char* git_version_short;
 
 struct VertexStruct {
-	Vec4 color;
-	Vec2 pos;	
+	cl_float4 color;
+	cl_float2 pos;	
 };
 
 int main() 
 {
-	const int N = 1;
+	const int N = 10000;
 	cout << "Partikel " << git_version_short << endl;
 
 	auto window = make_unique<GLWindow>("Partikel", 1000, 1000);
@@ -35,6 +35,7 @@ int main()
 
 	auto cl = make_unique<CLMaster>();
 	auto clBuf = make_unique<CLVertexBuffer<VertexStruct> >(*cl, *vao);
+	auto queue = cl->gpuQueue;
 
 	CLKernel kernel(*cl, "hello.cl", "hello");
 	kernel.setArg(0, clBuf->handle);
@@ -56,25 +57,18 @@ int main()
 	while(window->poll()) 
 	{
 		glFinish();
-		clBuf->acquire(cl->gpuQueue);
+		clBuf->acquire(queue);
 		kernel.setArg(1, time);
 		kernel.setArg(2, screen);
-		kernel.enqueue(cl->gpuQueue, N);
-		clBuf->release(cl->gpuQueue);
-		clFinish(cl->gpuQueue);
+		kernel.setArg(3, N);
+		kernel.enqueue(queue, N);
 
-		const float freq_time = 0.02;
-		const float freq_part = 0.01;
-		for (int i=0; i<N; i++) {			
-			const float phi = freq_time * time + i * freq_part;
-			Vec2 circle = Vec2(sin(phi), cos(phi));
-			float mod = fmod(i+time,1000.0) / 1000.0f;
-			circle *= (float)sin(mod * M_PI * 2);
-			data[i].pos = elmult(screen, (circle + Vec2(1))) * 0.5f;		
-			Vec3 rgb = hsv2rgb(Vec3(mod, 1, 1));
-			//data[i].color = Vec4(rgb.x, rgb.y, rgb.z, i/(float)N);
-		}
-		//vao->buffer.setData(&data[0], N);
+		/*clBuf->read(cl->gpuQueue, data);
+		for (int i=0;i<N;i++)
+			cout << "read " << i << ": pos " <<  data[i].pos.s[0] << "," << data[i].pos.s[1] << " color " << data[i].color.s[0] << "," << data[i].color.s[1] << "," << data[i].color.s[2] << "," << data[i].color.s[3] << endl;
+*/
+		clBuf->release(queue);
+		clFinish(queue);
 
 		vao->bind();
 		window->clearBuffer();

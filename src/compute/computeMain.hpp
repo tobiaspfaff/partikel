@@ -10,6 +10,8 @@
 #include "compute/opencl.hpp"
 #include "tools/log.hpp"
 
+void clTest(cl_int err, const std::string& msg);
+
 class CLMaster
 {
 public:
@@ -45,16 +47,19 @@ public:
 	cl_kernel handle;	
 };
 
+template<class T>
 class CLBuffer
 {
 public:
-	CLBuffer(CLMaster& master) {}
+	void read(cl_command_queue& queue, std::vector<T>& buffer);
+	void write(cl_command_queue& queue, const std::vector<T>& buffer);
 
 	cl_mem handle;
+	int size {0};
 };
 
 template<class T>
-class CLVertexBuffer : public CLBuffer
+class CLVertexBuffer : public CLBuffer<T>
 {
 public:
 	CLVertexBuffer(CLMaster& master, SingleVertexArray<T>& va);
@@ -69,37 +74,46 @@ public:
 // ------------------------------------
 
 template<class T>
-CLVertexBuffer<T>::CLVertexBuffer(CLMaster& master, SingleVertexArray<T>& va) :
-	CLBuffer(master)
+void CLBuffer<T>::read(cl_command_queue& queue, std::vector<T>& buffer)
+{
+	buffer.resize(size);
+	clTest(clEnqueueReadBuffer(queue, handle, CL_TRUE, 0, sizeof(T)*size, 
+							   &buffer[0], 0, nullptr, nullptr), "read buffer");
+}
+
+template<class T>
+void CLBuffer<T>::write(cl_command_queue& queue, const std::vector<T>& buffer)
+{
+	size = buffer.size();
+	clTest(clEnqueueWriteBuffer(queue, handle, CL_TRUE, 0, sizeof(T)*size, 
+						 	    &buffer[0], 0, nullptr, nullptr), "write buffer");
+}
+
+template<class T>
+CLVertexBuffer<T>::CLVertexBuffer(CLMaster& master, SingleVertexArray<T>& va) 
 {
 	cl_int err;
-	handle = clCreateFromGLBuffer(master.context, CL_MEM_WRITE_ONLY, va.buffer.handle, &err);
-	if(err != CL_SUCCESS)
-		fatalError("OpenCL error: create cl/gl buffer");
+	this->size = va.buffer.size;
+	this->handle = clCreateFromGLBuffer(master.context, CL_MEM_WRITE_ONLY, va.buffer.handle, &err);
+	clTest(err, "create cl/gl buffer");
 }
 
 template<class T>
 void CLKernel::setArg(int idx, const T& value) 
 {
-	cl_int err = clSetKernelArg(handle, idx, sizeof(T), &value);
-	if (err != CL_SUCCESS)
-		fatalError("Can't set OpenCL kernel argument");
+	clTest(clSetKernelArg(handle, idx, sizeof(T), &value), "set arg");
 }
 
 template<class T>
 void CLVertexBuffer<T>::acquire(cl_command_queue& queue) 
 {
-	cl_int err = clEnqueueAcquireGLObjects(queue, 1, &handle, 0, 0, 0);
-	if (err != CL_SUCCESS)
-		fatalError("Can't set OpenCL kernel argument");
+	clTest(clEnqueueAcquireGLObjects(queue, 1, &this->handle, 0, 0, 0), "aquire gl");
 }
 
 template<class T>
 void CLVertexBuffer<T>::release(cl_command_queue& queue) 
 {
-	cl_int err = clEnqueueReleaseGLObjects(queue, 1, &handle, 0, 0, 0);
-	if (err != CL_SUCCESS)
-		fatalError("Can't set OpenCL kernel argument");
+	clTest(clEnqueueReleaseGLObjects(queue, 1, &this->handle, 0, 0, 0), "release gl");
 }
 
 #endif

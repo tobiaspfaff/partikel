@@ -26,6 +26,8 @@ class VertexBuffer : public VertexBufferBase
 public:
 	VertexBuffer() : VertexBufferBase() {}
 	void setData(const T* data, int num);
+
+	int size {0};
 };
 
 class VertexArray
@@ -58,6 +60,7 @@ public:
 template<class T>
 void VertexBuffer<T>::setData(const T* data, int num) 
 {
+	size = num;
 	bind();
 	glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), nullptr, GL_STREAM_DRAW); // orphaning
 	if (data)

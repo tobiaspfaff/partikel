@@ -9,7 +9,7 @@
 
 using namespace std;
 
-inline void clTest(cl_int err, const string& msg) 
+void clTest(cl_int err, const string& msg) 
 {
 	if (err != CL_SUCCESS)
 		fatalError("OpenCL error: " + msg);
