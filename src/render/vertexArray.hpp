@@ -60,7 +60,8 @@ void VertexBuffer<T>::setData(const T* data, int num)
 {
 	bind();
 	glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), nullptr, GL_STREAM_DRAW); // orphaning
-	glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), data, GL_STREAM_DRAW);
+	if (data)
+		glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), data, GL_STREAM_DRAW);
 }
 
 template<class T>

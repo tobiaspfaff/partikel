@@ -147,3 +147,12 @@ CLKernel::CLKernel(CLMaster& master, const string& filename, const string& kerne
 	handle = clCreateKernel(program.handle, kernel.c_str(), &err);
 	clTest(err, "Can't create kernel " + kernel);
 }
+
+void CLKernel::enqueue(cl_command_queue& queue, size_t problem_size) 
+{
+	size_t local = 1;
+	cl_int err = clEnqueueNDRangeKernel(queue, handle, 1, nullptr, &problem_size, 
+										&local, 0, nullptr, nullptr);
+	clTest(err, "Can't enqueue kernel");
+}
+

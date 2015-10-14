@@ -1,7 +1,7 @@
 #version 410 core
 
-layout(location = 0) in vec2 vx_pos;
-layout(location = 1) in vec4 vx_color;
+layout(location = 0) in vec4 vx_color;
+layout(location = 1) in vec2 vx_pos;
 
 uniform vec2 scale;
 
