@@ -28,6 +28,7 @@ set(SOURCES
     src/render/shader.cpp
     src/render/texture.cpp
     src/render/vertexArray.cpp
+    src/sim/grid.cpp
     src/tools/log.cpp
 )
 

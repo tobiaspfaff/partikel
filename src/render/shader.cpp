@@ -113,6 +113,21 @@ void ShaderProgram::setUniform(int idx, const Vec4& v)
 	glProgramUniform4f(handle, idx, v.x, v.y, v.z, v.w);
 }
 
+void ShaderProgram::setUniform(int idx, const Vec2i& v)
+{
+	glProgramUniform2i(handle, idx, v.x, v.y);
+}
+
+void ShaderProgram::setUniform(int idx, const Vec3i& v)
+{
+	glProgramUniform3i(handle, idx, v.x, v.y, v.z);
+}
+
+void ShaderProgram::setUniform(int idx, const Vec4i& v)
+{
+	glProgramUniform4i(handle, idx, v.x, v.y, v.z, v.w);
+}
+
 int ShaderProgram::uniform(const char* name) 
 {
 	return glGetUniformLocation(handle, name);

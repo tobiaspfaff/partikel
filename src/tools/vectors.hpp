@@ -18,8 +18,8 @@ public:
         struct { T x, y; };
     };
     Vec() : x(0), y(0) {}
-    Vec(T v) : x(v), y(v) {}
-    Vec(T x, T y) : x(x), y(y) {}
+    explicit Vec(T v) : x(v), y(v) {}
+    explicit Vec(T x, T y) : x(x), y(y) {}
     inline T &operator[] (int i) {return data[i];}
     inline const T &operator[] (int i) const {return data[i];}
 };
@@ -31,8 +31,8 @@ public:
         struct { T x, y, z; };
     };
     Vec() : x(0), y(0) {}
-    Vec(T v) : x(v), y(v), z(v) {}
-    Vec(T x, T y, T z) : x(x), y(y), z(z) {}
+    explicit Vec(T v) : x(v), y(v), z(v) {}
+    explicit Vec(T x, T y, T z) : x(x), y(y), z(z) {}
     inline T &operator[] (int i) {return data[i];}
     inline const T &operator[] (int i) const {return data[i];}
 };
@@ -44,8 +44,8 @@ public:
         struct { T x, y, z, w; };
     };
     Vec() : x(0), y(0) {}
-    Vec(T v) : x(v), y(v), z(v), w(v) {}
-    Vec(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+    explicit Vec(T v) : x(v), y(v), z(v), w(v) {}
+    explicit Vec(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
     inline T &operator[] (int i) {return data[i];}
     inline const T &operator[] (int i) const {return data[i];}
 };

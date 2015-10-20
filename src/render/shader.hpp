@@ -44,6 +44,9 @@ public:
 	void setUniform(int idx, const Vec2& v);
 	void setUniform(int idx, const Vec3& v);
 	void setUniform(int idx, const Vec4& v);
+	void setUniform(int idx, const Vec2i& v);
+	void setUniform(int idx, const Vec3i& v);
+	void setUniform(int idx, const Vec4i& v);
 
 	unsigned int handle;
 	std::shared_ptr<VertexShader> vs;

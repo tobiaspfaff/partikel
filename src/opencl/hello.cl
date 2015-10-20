@@ -34,7 +34,7 @@ __kernel void hello(__global struct Vertex* out, const float time, const float2 
 	const float freq_time = 0.02;
 	const float freq_part = 0.01;
 	
-	const float phi = freq_time * time + tid * freq_part;			
+	const float phi = freq_time * time + tid * freq_part;		
 	const float mod = fmod(tid+time, 1000) / 1000;
 	const float R = sin(mod * M_PI * 2);
 	const float tx = (sin(phi) * R + 1) * 0.5 * screen.x;

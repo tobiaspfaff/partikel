@@ -15,30 +15,32 @@ using namespace std;
 
 extern const char* git_version_short;
 
-struct VertexStruct {
-	cl_float4 color;
-	cl_float2 pos;	
-};
-
 int main() 
 {
-	const int N = 10000;
 	cout << "Partikel " << git_version_short << endl;
 
 	auto window = make_unique<GLWindow>("Partikel", 1000, 1000);
 
-	auto vao = make_unique<SingleVertexArray<VertexStruct> >();
-	vao->defineAttrib(0, GL_FLOAT, 4, offsetof(VertexStruct, color));
-    vao->defineAttrib(1, GL_FLOAT, 2, offsetof(VertexStruct, pos));
-    vector<VertexStruct> data(N);
-	vao->buffer.setData(&data[0], N);
+	auto vaoGrid = make_unique<SingleVertexArray<cl_float4> >();
+	vaoGrid->defineAttrib(0, GL_FLOAT, 4, 0);
+    //vao->defineAttrib(1, GL_FLOAT, 2, offsetof(VertexStruct, pos));
+    
+	// grid
+	Vec2i gridSize(100,100);
+	vector<cl_float4> data(gridSize.x * gridSize.y);
+	for (int i=0,idx=0; i<gridSize.y; i++)
+		for (int j=0; j<gridSize.x; j++,idx++)
+			data[idx] = {{ (float)i/gridSize.x, (float)j/gridSize.y, 0.0f, 1.0f }};
 
-	auto cl = make_unique<CLMaster>();
+	vaoGrid->buffer.setData(&data[0], data.size());
+
+	/*auto cl = make_unique<CLMaster>();
 	auto clBuf = make_unique<CLVertexBuffer<VertexStruct> >(*cl, *vao);
 	auto queue = cl->gpuQueue;
 
 	CLKernel kernel(*cl, "hello.cl", "hello");
 	kernel.setArg(0, clBuf->handle);
+	*/
 
 	auto program = make_unique<ShaderProgram>(
 		make_shared<VertexShader>("triangle_test.vs"),
@@ -48,33 +50,30 @@ int main()
 	Vec2 screen(1920, 1080);
 
 	program->use();
-	program->setUniform(program->uniform("scale"), Vec2(2/screen.x, 2/screen.y));
-	vao->bind();
+	program->setUniform(program->uniform("size"), gridSize);
+	program->setUniform(program->uniform("scale"), Vec2(2.0/gridSize.x, 2.0/gridSize.y));
+	vaoGrid->bind();
 
 	auto tex = make_unique<Texture>("star02.png");
 
 	float time = 0;
 	while(window->poll()) 
 	{
-		glFinish();
+		/*glFinish();
 		clBuf->acquire(queue);
 		kernel.setArg(1, time);
 		kernel.setArg(2, screen);
 		kernel.setArg(3, N);
 		kernel.enqueue(queue, N);
 
-		/*clBuf->read(cl->gpuQueue, data);
-		for (int i=0;i<N;i++)
-			cout << "read " << i << ": pos " <<  data[i].pos.s[0] << "," << data[i].pos.s[1] << " color " << data[i].color.s[0] << "," << data[i].color.s[1] << "," << data[i].color.s[2] << "," << data[i].color.s[3] << endl;
-*/
 		clBuf->release(queue);
-		clFinish(queue);
+		clFinish(queue);*/
 
-		vao->bind();
+		vaoGrid->bind();
 		window->clearBuffer();
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glDrawArrays(GL_POINTS, 0, N);
+		glDrawArrays(GL_POINTS, 0, data.size());
 		window->swap();
 
 		time += 1;
