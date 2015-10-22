@@ -25,7 +25,7 @@ class VertexBuffer : public VertexBufferBase
 {
 public:
 	VertexBuffer() : VertexBufferBase() {}
-	void setData(const T* data, int num);
+	void setData(const T* data, size_t num);
 
 	int size {0};
 };
@@ -58,7 +58,7 @@ public:
 // ------------------------------------
 
 template<class T>
-void VertexBuffer<T>::setData(const T* data, int num) 
+void VertexBuffer<T>::setData(const T* data, size_t num) 
 {
 	size = num;
 	bind();

@@ -1,7 +1,7 @@
 // Create GL window and context
 
+#include "render/opengl.hpp"
 #include <iostream>
-#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "render/window.hpp"
 #include "tools/log.hpp"

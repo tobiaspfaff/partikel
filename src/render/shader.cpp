@@ -1,10 +1,10 @@
 // Shader
 
+#include "render/opengl.hpp"
 #include "render/shader.hpp"
 #include "tools/log.hpp"
 #include <fstream>
 #include <iostream>
-#include <GL/glew.h>
 
 using namespace std;
 
@@ -26,7 +26,7 @@ static unsigned int shaderLoad(const string& filename, GLenum type, const string
     file.close();
     buffer[size] = '\0';
     
-    glShaderSource(handle, 1, &buffer, nullptr);
+    glShaderSource(handle, 1, (const GLchar**)&buffer, nullptr);
     glCompileShader(handle);
     int params = -1;
     glGetShaderiv(handle, GL_COMPILE_STATUS, &params);

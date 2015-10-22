@@ -1,6 +1,6 @@
 // Texture and image functions
 
-#include <GL/glew.h>
+#include "render/opengl.hpp"
 #include "render/texture.hpp"
 #include "tools/log.hpp"
 #include "dependencies/stb_image.h"

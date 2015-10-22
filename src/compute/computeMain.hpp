@@ -12,19 +12,20 @@
 
 void clTest(cl_int err, const std::string& msg);
 
-class CLMaster
+class CLQueue
 {
 public:
-	CLMaster();
-
-	std::vector<cl_device_id> devices;
+	cl_platform_id platform;
+	cl_device_id device;
 	cl_context context;
-	cl_command_queue cpuQueue;
-	cl_command_queue gpuQueue;
-protected:
-	void initialize();
+	cl_command_queue handle;
+
+	void printInfo();
 };
 
+void createQueues(CLQueue& cpuQueue, CLQueue& gpuQueue);
+
+/*
 class CLProgram
 {
 public:
@@ -67,12 +68,12 @@ public:
 	void acquire(cl_command_queue& queue);
 	void release(cl_command_queue& queue);
 };
-
+*/
 
 // ------------------------------------
 // IMPLEMENTATION
 // ------------------------------------
-
+/*
 template<class T>
 void CLBuffer<T>::read(cl_command_queue& queue, std::vector<T>& buffer)
 {
@@ -115,5 +116,5 @@ void CLVertexBuffer<T>::release(cl_command_queue& queue)
 {
 	clTest(clEnqueueReleaseGLObjects(queue, 1, &this->handle, 0, 0, 0), "release gl");
 }
-
+*/
 #endif

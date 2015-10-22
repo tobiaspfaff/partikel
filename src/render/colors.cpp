@@ -36,7 +36,7 @@ Vec3 rgb2hsv(const Vec3& in)
     else
         out.x = 4.0 + ( in.x - in.y ) / delta;  // between magenta & cyan
 
-    out.x *= 1.0/6.0;                              // degrees
+    out.x *= 1.0f/6.0f;                              // degrees
 
     if( out.x < 0.0 )
         out.x += 1.0;

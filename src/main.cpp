@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <GL/glew.h>
+#include "render/opengl.hpp"
 #include "render/colors.hpp"
 #include "render/window.hpp"
 #include "tools/vectors.hpp"
@@ -34,8 +34,10 @@ int main()
 
 	vaoGrid->buffer.setData(&data[0], data.size());
 
-	/*auto cl = make_unique<CLMaster>();
-	auto clBuf = make_unique<CLVertexBuffer<VertexStruct> >(*cl, *vao);
+	CLQueue cpuQueue, gpuQueue;
+	createQueues(cpuQueue, gpuQueue);
+	//auto cl = make_unique<CLMaster>();
+	/*auto clBuf = make_unique<CLVertexBuffer<VertexStruct> >(*cl, *vao);
 	auto queue = cl->gpuQueue;
 
 	CLKernel kernel(*cl, "hello.cl", "hello");
@@ -51,7 +53,7 @@ int main()
 
 	program->use();
 	program->setUniform(program->uniform("size"), gridSize);
-	program->setUniform(program->uniform("scale"), Vec2(2.0/gridSize.x, 2.0/gridSize.y));
+	program->setUniform(program->uniform("scale"), Vec2(2.0f/gridSize.x, 2.0f/gridSize.y));
 	vaoGrid->bind();
 
 	auto tex = make_unique<Texture>("star02.png");
@@ -73,7 +75,7 @@ int main()
 		window->clearBuffer();
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glDrawArrays(GL_POINTS, 0, data.size());
+		glDrawArrays(GL_POINTS, 0, (GLsizei)data.size());
 		window->swap();
 
 		time += 1;
