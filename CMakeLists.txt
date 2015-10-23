@@ -43,6 +43,12 @@ set(HEADERS
     src/sim/grid.hpp
     src/tools/log.hpp
 )
+
+file(GLOB SHADER "shader/*")
+file(GLOB KERNEL "src/opencl/*.cl")
+
+set_source_files_properties(${SHADER} PROPERTIES HEADER_FILE_ONLY TRUE)
+set_source_files_properties(${KERNEL} PROPERTIES HEADER_FILE_ONLY TRUE)
 set_source_files_properties(${HEADERS} PROPERTIES HEADER_FILE_ONLY TRUE)
 
 if (WIN32)
@@ -124,6 +130,8 @@ endif()
 add_executable(${EXECCMD} 
     ${SOURCES} 
 	${HEADERS}
+	${SHADER}
+	${KERNEL}
     ${VERSIONFILE}
 )
 
@@ -138,3 +146,7 @@ target_include_directories(${EXECCMD} PUBLIC ${AS_INCLUDES})
 
 source_group(Headers FILES ${HEADERS})
 source_group(Source FILES ${SOURCES} ${VERSIONFILE})
+source_group(Shader FILES ${SHADER})
+source_group(OpenCL FILES ${KERNEL})
+
+add_custom_target(SourceFiles SOURCES ${SHADER} ${KERNEL})

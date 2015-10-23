@@ -36,13 +36,13 @@ int main()
 
 	CLQueue cpuQueue, gpuQueue;
 	createQueues(cpuQueue, gpuQueue);
-	//auto cl = make_unique<CLMaster>();
-	/*auto clBuf = make_unique<CLVertexBuffer<VertexStruct> >(*cl, *vao);
-	auto queue = cl->gpuQueue;
+	auto& queue = gpuQueue;
 
-	CLKernel kernel(*cl, "hello.cl", "hello");
+	CLKernel kernel(queue, "hello.cl", "hello");
+	auto clBuf = make_unique<CLVertexBuffer<cl_float4> >(queue, *vaoGrid);
 	kernel.setArg(0, clBuf->handle);
-	*/
+	kernel.setArg(1, 0);
+	kernel.setArg(2, gridSize);
 
 	auto program = make_unique<ShaderProgram>(
 		make_shared<VertexShader>("triangle_test.vs"),
@@ -61,15 +61,13 @@ int main()
 	float time = 0;
 	while(window->poll()) 
 	{
-		/*glFinish();
-		clBuf->acquire(queue);
+		glFinish();
+		clBuf->acquire();
 		kernel.setArg(1, time);
-		kernel.setArg(2, screen);
-		kernel.setArg(3, N);
-		kernel.enqueue(queue, N);
+		kernel.enqueue(gridSize.x * gridSize.y);
 
-		clBuf->release(queue);
-		clFinish(queue);*/
+		clBuf->release();
+		clFinish(queue.handle);
 
 		vaoGrid->bind();
 		window->clearBuffer();
@@ -78,7 +76,7 @@ int main()
 		glDrawArrays(GL_POINTS, 0, (GLsizei)data.size());
 		window->swap();
 
-		time += 1;
+		time += 0.01;
 	}
 
 	return 0;	

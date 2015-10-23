@@ -158,10 +158,10 @@ void createQueues(CLQueue& cpu, CLQueue& gpu)
 	cpu.printInfo();
 	gpu.printInfo();
 }
-/*
+
 map<string, CLProgram> CLProgram::instances;
 
-CLProgram& CLProgram::get(CLMaster& master, const std::string& filename) 
+CLProgram& CLProgram::get(CLQueue& queue, const std::string& filename) 
 {
 	auto it = instances.find(filename);
 	if (it != instances.end()) 
@@ -180,38 +180,33 @@ CLProgram& CLProgram::get(CLMaster& master, const std::string& filename)
 	cl_int err;
 	size_t size = buffer.size();
 	const char* buf = buffer.c_str();
-	prog.handle = clCreateProgramWithSource(master.context, 1, &buf, &size, &err);
+	prog.handle = clCreateProgramWithSource(queue.context, 1, &buf, &size, &err);
 	clTest(err, "Failed to create source of " + filename);
 	if(clBuildProgram(prog.handle, 0, nullptr, nullptr, nullptr, nullptr) != CL_SUCCESS)
 	{
 		// output build error
-		for(auto const& dev: master.devices) 
-		{
-			size_t len;
- 			char buffer[2048];
- 			clGetProgramBuildInfo(prog.handle, dev, CL_PROGRAM_BUILD_LOG, 
- 								  sizeof(buffer), buffer, &len);
- 			cerr << "Build log: " << buffer << endl;
- 		}
-		fatalError("Build failed");
+		size_t len;
+ 		char buffer[2048];
+ 		clGetProgramBuildInfo(prog.handle, queue.device, CL_PROGRAM_BUILD_LOG, 
+			sizeof(buffer), buffer, &len);
+ 		cerr << "Build log: " << buffer << endl;
+ 		fatalError("Build failed");
 	}
 	return prog;
 }
 
-CLKernel::CLKernel(CLMaster& master, const string& filename, const string& kernel) :
-	program(CLProgram::get(master, filename))
+CLKernel::CLKernel(CLQueue& queue, const string& filename, const string& kernel) :
+	queue(queue), program(CLProgram::get(queue, filename))
 {
 	cl_int err;
 	handle = clCreateKernel(program.handle, kernel.c_str(), &err);
 	clTest(err, "Can't create kernel " + kernel);
 }
 
-void CLKernel::enqueue(cl_command_queue& queue, size_t problem_size) 
+void CLKernel::enqueue(size_t problem_size) 
 {
 	size_t local = 1;
-	cl_int err = clEnqueueNDRangeKernel(queue, handle, 1, nullptr, &problem_size, 
+	cl_int err = clEnqueueNDRangeKernel(queue.handle, handle, 1, nullptr, &problem_size, 
 										&local, 0, nullptr, nullptr);
 	clTest(err, "Can't enqueue kernel");
 }
-
-*/
