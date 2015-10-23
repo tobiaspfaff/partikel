@@ -29,6 +29,7 @@ set(SOURCES
     src/render/texture.cpp
     src/render/vertexArray.cpp
     src/sim/grid.cpp
+	src/sim/mgsolve.cpp
     src/tools/log.cpp
 )
 
@@ -41,6 +42,7 @@ set(HEADERS
     src/render/texture.hpp
     src/render/vertexArray.hpp
     src/sim/grid.hpp
+	src/sim/mgsolve.hpp    
     src/tools/log.hpp
 )
 

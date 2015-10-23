@@ -4,7 +4,7 @@
 #include <cmath>
 #include <iostream>
 
-inline double sq (double x) {return x*x;}
+inline float sq (float x) {return x*x;}
 
 #define tpl template <int n, typename T>
 #define VecnT Vec<n,T>
