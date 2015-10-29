@@ -17,7 +17,7 @@ MultigridPoisson::MultigridPoisson(const Vec2i& size)
 	if (!isPowerOf2(size.x) || !isPowerOf2(size.y))
 		fatalError("Multigrid solver only supports 2^n grids.");
 
-	double h0 = 1;// 00 / size.x; // grid spacing
+	float h0 = 25.0f / size.x; // grid spacing
 
 	// optimal omega
 	// Irad Yavneh. On red-black SOR smoothing in multigrid. SIAM J. Sci. Comput., 17(1):180-192, 1996.
@@ -45,9 +45,11 @@ MultigridPoisson::MultigridPoisson(const Vec2i& size)
 	{
 		for (int i = 0; i < size.x; i++)
 		{
-			float s = 0.1f;
-			float b = (i > 30 && i < 40 && j > 60 && j < 100) ? s : 0;
-			b = (i > 60 && i < 70 && j > 60 && j < 100) ? -s : b;
+			float s = 0.8f;
+			int di = i * 128 / size.x;
+			int dj = j * 128 / size.y;
+			float b = (di > 30 && di < 40 && dj > 60 && dj < 100) ? s : 0;
+			b = (di > 60 && di < 70 && dj > 60 && dj < 100) ? -s : b;
 			levels[0]->b[(j+1)*(size.x+2) + (i+1)] = b;
 		}
 	}
@@ -74,11 +76,6 @@ bool MultigridPoisson::solve(float& residual, float tolerance, int maxIter)
 void MultigridPoisson::clearZero(int level)
 {
 	fill(levels[level]->u.begin(), levels[level]->u.end(), 0.0f);
-}
-
-bool MultigridPoisson::doFMG(float& residual, float tolerance, int maxIter) 
-{
-	return false;
 }
 
 void MultigridPoisson::applyBC(int level, bool initialize)
@@ -166,7 +163,7 @@ static void relaxCPU(float* h_u, float* h_b, const Vec2i& size, float h, int red
 				eq += ptrU[DY];
 				L++;
 			}
-			//L = 4; // 0 dirichlet
+			L = 4; // 0 dirichlet
 			float residual = eq / L - *ptrU;
 			*ptrU += omega * residual;
 			ptrB += 2;
@@ -212,7 +209,7 @@ static double computeResidualCPU(float* h_u, float* h_b, float* h_r, const Vec2i
 				eq += ptrU[DY];
 				L++;
 			}
-			//L = 4; // 0 dirichlet
+			L = 4; // 0 dirichlet
 			eq -= L * ptrU[0];
 			float residual = (*ptrB) - eq / h2;
 			*ptrR = residual;
@@ -226,41 +223,59 @@ static double computeResidualCPU(float* h_u, float* h_b, float* h_r, const Vec2i
 }
 
 
-void MultigridPoisson::vcycle()
+void MultigridPoisson::vcycle(int fine)
 {
-	ofstream ofs("c:\\temp\\vcycle.txt");
-	/*for (int i = 0; i < 1000; i++) {
-		double v = computeResidual(0);
-		ofs << i << " " << v << endl;
-		clearZero(0);
-		relax(0, nu1);
-	}*/
-
 	// down
-	for (int i = 0; i < levels.size() - 1; i++)
+	for (int i = fine; i < levels.size()-1; i++)
 	{
 		relax(i, nu1);
 		double v = computeResidual(i);
-		ofs << "level " << i << " " << v << endl;
+		cout << "V-Cycle Down: level " << i << " residual " << v << endl;
 		restrictResidual(i + 1);
-		clearZero(i + 1);		
+		clearZero(i + 1);
 	}
 	
 	// solve coarsest
-	relax(levels.size() - 1, nu1 + nu2);
+	relax(levels.size()-1, 2* (nu1 + nu2));
 	
 	// up
-	for (int i = levels.size() - 2; i >= 0; i--)
+	for (int i = levels.size() - 2; i >= fine; i--)
 	{
 		prolongV(i + 1);
-		relax(i, nu2);
+		//relax(i, nu2);
+		double v = computeResidual(i);
+		cout << "V-Cycle Up: level " << i << " residual " << v << endl;
 	}
-	
-	ofs.close();
-	
-	/*
-	restrictResidual(2);
-	restrictResidual(3);*/
+}
+
+bool MultigridPoisson::doFMG(float& residual, float tolerance, int maxIter)
+{
+	// initialize all residuals
+	for (int i = 0; i < levels.size() - 1; i++)
+	{
+		clearZero(i); 
+		computeResidual(i);
+		restrictResidual(i+1);		
+	}
+
+	// fine level for v-cycle; start at coarsest
+	for (int fine = levels.size() - 1; fine >= 0; fine--)
+	{
+		// do a number of v-cycles
+		int numV = nuV; // OpenCurrent uses (fine==0) ? nuV+1 : 1
+		numV = (fine == 0) ? nuV+1 : 1;
+		for (int nv = 0; nv < numV; nv++)
+		{
+			vcycle(fine);
+		}
+
+		// use as initial condition for next-finer level
+		if (fine > 0)
+		{
+			prolongV(fine);
+		}
+	}
+	return true;
 }
 
 double MultigridPoisson::computeResidual(int level)
@@ -279,7 +294,7 @@ void MultigridPoisson::prolongV(int level)
 	float* h_src = &levels[level]->u[DX_SRC + DY_SRC];
 	float* h_dst = &levels[level - 1]->u[DX_DST + DY_DST];
 
-	const float c0 = 9.0 / 16.0, c1 = 3.0 / 16.0, c2 = 1.0 / 16;
+	const float c0 = 9.0f / 16.0f, c1 = 3.0f / 16.0f, c2 = 1.0f / 16.0f;
 
 	for (int j = 0; j < sizeSrc.y; j++)
 	{

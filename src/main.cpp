@@ -31,7 +31,7 @@ bool keyHandler(int key)
 	}
 	else if (key == GLFW_KEY_EQUAL)
 	{
-		displayLevel = min(4, displayLevel + 1);
+		displayLevel = min((int)_mg->levels.size()-1, displayLevel + 1);
 	}
 	else if (key == GLFW_KEY_BACKSPACE)
 	{
@@ -43,13 +43,26 @@ bool keyHandler(int key)
 		if (displayGrid == 2)
 			cout << "Grid: R" << endl;
 	}
+	else if (key == GLFW_KEY_F)
+	{
+		float dummy;
+		cout << "FMG cycle" << endl;
+		_mg->doFMG(dummy, 0, 0);
+	}
 	else if (key == GLFW_KEY_V)
 	{
-		_mg->vcycle();
+		cout << "V cycle" << endl;
+		_mg->vcycle(0);
 	}
 	else if (key == GLFW_KEY_R)
 	{
+		cout << "100 relax steps" << endl;
 		_mg->relax(0, 100);
+		cout << _mg->computeResidual(0) << endl;
+	}
+	else if (key == GLFW_KEY_C)
+	{
+		_mg->clearZero(0);
 	}
 	else
 	{
@@ -73,8 +86,8 @@ int main()
     //vao->defineAttrib(1, GL_FLOAT, 2, offsetof(VertexStruct, pos));
     
 	// grid
-	Vec2i gridSize(128, 128);
-	Vec2i bcGridSize(130, 130);
+	Vec2i gridSize(1024, 1024);
+	Vec2i bcGridSize = gridSize + Vec2i(2);
 	vector<cl_float4> data(bcGridSize.x * bcGridSize.y);
 	vaoGrid->buffer.setData(&data[0], data.size());
 	

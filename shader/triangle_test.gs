@@ -16,7 +16,7 @@ in Vertex
 
 void main()
 {
-	const float ext = 0.45;
+	const float ext = 0.5;
 	vec2 pos = gl_in[0].gl_Position.xy;
 	vec2 sz = vec2(ext*scale.x, ext*scale.y);
 	

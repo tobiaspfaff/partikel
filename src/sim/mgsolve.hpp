@@ -36,7 +36,8 @@ public:
 	
 	int nu1 = 2;  // pre-smoothing steps
 	int nu2 = 2;  // post-smoothing steps
-	
+	int nuV = 2; // number of v-cycles in FMG
+
 	BC bcPosX, bcNegX, bcPosY, bcNegY;
 
 //protected:
@@ -46,7 +47,7 @@ public:
 	void relax(int level, int iterations);
 	void clearZero(int level);
 	bool doFMG(float& residual, float tolerance, int maxIter);
-	void vcycle();
+	void vcycle(int fine);
 	void applyBC(int level, bool initialize);
 };
 
