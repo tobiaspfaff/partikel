@@ -24,19 +24,9 @@ static float4 hsv2rgb(float4 hsv)
     return rgb;
 }
 
-__kernel void hello(__global float4* out, const float time, const int2 size) {
+__kernel void display(__global float* in, __global float4* out, const int2 size) {
 	size_t tid = get_global_id(0);
-	/*const float freq_time = 0.02;
-	const float freq_part = 0.01;
-	
-	const float phi = freq_time * time + tid * freq_part;		
-	const float mod = fmod(tid+time, 1000) / 1000;
-	const float R = sin(mod * M_PI * 2);
-	const float tx = (sin(phi) * R + 1) * 0.5 * screen.x;
-	const float ty = (cos(phi) * R + 1) * 0.5 * screen.y;*/
-	int px = tid / size.x;
-	int py = tid - px*size.x;
-	float dx = (float)px / size.x;
-	float dy = (float)py / size.y;
-	out[tid] = hsv2rgb((float4)(dx + dy + time, 1, 1, 1));
+	//int px = tid / size.x;
+	//int py = tid - px*size.x;
+	out[tid] = hsv2rgb((float4)(in[tid], 1, 1, 1));
 }

@@ -4,6 +4,8 @@
 #define RENDER_INIT_HPP
 
 #include <string>
+#include <vector>
+#include <functional>
 
 struct GLFWwindow;
 
@@ -15,6 +17,8 @@ public:
 	void clearBuffer();
 	void swap();
 	bool poll(); // return false if closed
+
+	std::vector<std::function<bool(int)> > keyHandlers;
 };
 
 #endif

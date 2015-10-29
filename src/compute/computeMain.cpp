@@ -75,7 +75,7 @@ static cl_device_id findRenderDevice(cl_platform_id platform) {
 	clReleaseContext(context);
 #elif defined (WIN32)
 	auto fn = (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(platform, "clGetGLContextInfoKHR");
-	clTest(fn(&renderContextProps(platform)[0], CL_DEVICES_FOR_GL_CONTEXT_KHR, sizeof(renderer), &renderer, NULL), "get gl context");
+	cl_int err = fn(&renderContextProps(platform)[0], CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(renderer), &renderer, NULL);
 #else
 	
 #endif

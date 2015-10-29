@@ -19,6 +19,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	{
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
+	else if (action == GLFW_PRESS)
+	{
+		GLWindow* inst = (GLWindow*)glfwGetWindowUserPointer(window);
+		for (auto& handler : inst->keyHandlers)
+		{
+			if (handler(key))
+				return;
+		}
+	}
 }
 
 GLWindow::GLWindow(const string& name, int width, int height) 
@@ -44,6 +53,7 @@ GLWindow::GLWindow(const string& name, int width, int height)
 	{
 		fatalError("Can't create GLFW window");
 	}
+	glfwSetWindowUserPointer(window, this);
 	glfwMakeContextCurrent(window);
 	glfwSetKeyCallback(window, key_callback);
 

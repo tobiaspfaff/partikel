@@ -52,6 +52,7 @@ template<class T>
 class CLBuffer
 {
 public:
+	CLBuffer(CLQueue& queue, int size);
 	CLBuffer(CLQueue& queue) : queue(queue) {}
 	void read(std::vector<T>& buffer);
 	void write(const std::vector<T>& buffer);
@@ -74,6 +75,14 @@ public:
 // ------------------------------------
 // IMPLEMENTATION
 // ------------------------------------
+
+template<class T>
+CLBuffer<T>::CLBuffer(CLQueue& queue, int size) : queue(queue), size(size)
+{
+	cl_int err;
+	this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T)*size, nullptr, &err);
+	clTest(err, "create cl buffer");
+}
 
 template<class T>
 void CLBuffer<T>::read(std::vector<T>& buffer)
