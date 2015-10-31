@@ -35,9 +35,6 @@ MultigridPoisson::MultigridPoisson(const Vec2i& size, float h0)
 	// Irad Yavneh. On red-black SOR smoothing in multigrid. SIAM J. Sci. Comput., 17(1):180-192, 1996.
 	omega = 4 - 2 * sqrt(2);
 
-	BC bc(BC::Type::Dirichlet, 0.9, h0);
-	bcPosX = bcNegX = bcPosY = bcNegY = bc;
-
 	// get max levels
 	Vec2i lSize = size;
 	float h = h0;
@@ -55,30 +52,15 @@ MultigridPoisson::MultigridPoisson(const Vec2i& size, float h0)
 		h *= 2.0f;
 	}
 	cout << levels.size() << " levels generated" << endl;
-
-	for (int j = 0; j < size.y; j++)
-	{
-		for (int i = 0; i < size.x; i++)
-		{
-			float s = 0.0f;
-			int di = i * 128 / size.x;
-			int dj = j * 128 / size.y;
-			float b = (di > 30 && di < 40 && dj > 60 && dj < 100) ? s : 0;
-			b = (di > 60 && di < 70 && dj > 60 && dj < 100) ? -s : b;
-			levels[0]->b[(j+1)*(size.x+2) + (i+1)] = b;
-		}
-	}
 }
 
-bool MultigridPoisson::solve(float& residual, float tolerance, int maxIter)
+bool MultigridPoisson::solve(float& residual, float tolerance)
 {
-	return true;
-
-	if (!doFMG(residual, tolerance, maxIter)) 
+	if (!doFMG(residual, tolerance)) 
 	{
 		clearZero(0);
 		cout << "Warning: fmg did not converge, retrying with zeroed vector" << endl;
-		if (!doFMG(residual, tolerance, maxIter))
+		if (!doFMG(residual, tolerance))
 		{
 			cout << "FMG did not converge" << endl;
 			return false;
@@ -133,7 +115,6 @@ void MultigridPoisson::applyBC(int level)
 		*ptr = valNegY - bcNegY.M * ptr[DY];
 		ptr += DX;
 	}
-	return;
 	// corners
 	ptr = &levels[level]->u[0];
 	*ptr = 0.5* (ptr[ DX] + ptr[ DY]);
@@ -243,7 +224,7 @@ void MultigridPoisson::vcycle(int fine)
 	}
 }
 
-bool MultigridPoisson::doFMG(float& residual, float tolerance, int maxIter)
+bool MultigridPoisson::doFMG(float& residual, float tolerance)
 {
 	float linf, l2;
 

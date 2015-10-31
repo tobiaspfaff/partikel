@@ -47,16 +47,16 @@ bool keyHandler(int key)
 	{
 		float dummy;
 		cout << "FMG cycle" << endl;
-		_mg->doFMG(dummy, 0, 0);
+		//_mg->doFMG(dummy, 0);
 	}
 	else if (key == GLFW_KEY_V)
 	{
 		cout << "V cycle" << endl;
-		_mg->vcycle(0);
+		//_mg->vcycle(0);
 	}
 	else if (key == GLFW_KEY_R)
 	{
-		cout << "100 relax steps" << endl;
+/*		cout << "100 relax steps" << endl;
 		float l2, linf;
 		_mg->applyBC(0);
 		for (int i = 0; i < 12; i++) {
@@ -64,11 +64,11 @@ bool keyHandler(int key)
 			_mg->relax(0, 4, true);
 		}
 		_mg->computeResidual(0, linf, l2);
-		cout << "Linf: " << linf << " L2: " << l2 << endl;
+		cout << "Linf: " << linf << " L2: " << l2 << endl;*/
 	}
 	else if (key == GLFW_KEY_C)
 	{
-		_mg->clearZero(0);
+		//_mg->clearZero(0);
 	}
 	else
 	{
@@ -99,7 +99,7 @@ int main()
 	
 	MultigridPoisson mgd(gridSize, 25.0f/gridSize.x);
 	_mg = &mgd;
-	Grid1f grid(bcGridSize, queue);
+	Grid1f grid(gridSize, 1, queue);
 	grid.allocHost();
 
 	CLKernel kernel(queue, "display.cl", "display");
