@@ -18,21 +18,25 @@ struct MGLevel
 
 struct BC 
 {
-	enum class Type { Dirichlet = 0, Neumann = 1 };
-	Type type = Type::Dirichlet;
-	float value = 0;
+	enum class Type { None = 0, Dirichlet, Neumann };
+	BC() {}
+	BC(Type type, float value, float h);
+
+	Type type = Type::None;
+	float ghost = 0;
+	float M = 0;
 };
 
 class MultigridPoisson
 {
 public:
 	
-	MultigridPoisson(const Vec2i& size);
+	MultigridPoisson(const Vec2i& size, float h);
 	bool solve(float& residual, float tolerance, int maxIter);
 
 	std::vector<std::unique_ptr<MGLevel> > levels;
 	
-	float omega_opt = 0;
+	float omega = 0;
 	
 	int nu1 = 2;  // pre-smoothing steps
 	int nu2 = 2;  // post-smoothing steps
@@ -41,14 +45,15 @@ public:
 	BC bcPosX, bcNegX, bcPosY, bcNegY;
 
 //protected:
-	double computeResidual(int level);
+	void computeResidual(int level, float& linf, float& l2);
 	void restrictResidual(int level);
 	void prolongV(int level);
-	void relax(int level, int iterations);
+	void relax(int level, int iterations, bool reverse);
 	void clearZero(int level);
 	bool doFMG(float& residual, float tolerance, int maxIter);
 	void vcycle(int fine);
-	void applyBC(int level, bool initialize);
+	void applyBC(int level);
+	void relaxCPU(float* h_u, float* h_b, const Vec2i& size, float h, int redBlack);
 };
 
 #endif

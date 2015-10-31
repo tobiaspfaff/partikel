@@ -57,8 +57,14 @@ bool keyHandler(int key)
 	else if (key == GLFW_KEY_R)
 	{
 		cout << "100 relax steps" << endl;
-		_mg->relax(0, 100);
-		cout << _mg->computeResidual(0) << endl;
+		float l2, linf;
+		_mg->applyBC(0);
+		for (int i = 0; i < 12; i++) {
+			_mg->relax(0, 4, false);
+			_mg->relax(0, 4, true);
+		}
+		_mg->computeResidual(0, linf, l2);
+		cout << "Linf: " << linf << " L2: " << l2 << endl;
 	}
 	else if (key == GLFW_KEY_C)
 	{
@@ -91,7 +97,7 @@ int main()
 	vector<cl_float4> data(bcGridSize.x * bcGridSize.y);
 	vaoGrid->buffer.setData(&data[0], data.size());
 	
-	MultigridPoisson mgd(gridSize);
+	MultigridPoisson mgd(gridSize, 25.0f/gridSize.x);
 	_mg = &mgd;
 	Grid1f grid(bcGridSize, queue);
 	grid.allocHost();
