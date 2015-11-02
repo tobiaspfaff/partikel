@@ -41,6 +41,7 @@ public:
 	inline float* ptrV() { return &v.buffer[ghost + ghost*layout.x]; }
 	inline float* ptrU(int x, int y) { return &u.buffer[(ghost + x) + (ghost + y)*layout.x]; }
 	inline float* ptrV(int x, int y) { return &v.buffer[(ghost + x) + (ghost + y)*layout.y]; }
+	inline int index(int x, int y) { return (ghost + x) + (ghost + y)*layout.x; }
 	inline int stride() { return layout.x; }
 
 	CLBuffer<cl_float> u, v;

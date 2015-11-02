@@ -32,6 +32,7 @@ set(SOURCES
     src/sim/grid.cpp
 	src/sim/mgsolve.cpp
 	src/sim/pressure.cpp
+	src/sim/semilagrange.cpp
     src/tools/log.cpp
 )
 
@@ -47,6 +48,7 @@ set(HEADERS
     src/sim/grid.hpp
 	src/sim/mgsolve.hpp    
 	src/sim/pressure.hpp
+    src/sim/semilagrange.hpp
     src/tools/log.hpp
 )
 

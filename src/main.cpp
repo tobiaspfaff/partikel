@@ -43,6 +43,9 @@ bool keyHandler(int key, int mods)
 	case GLFW_KEY_P:
 		ps->solve();
 		return true;
+	case GLFW_KEY_A:
+		ps->solve();
+		return true;
 	default:
 		return false;
 	}
@@ -64,11 +67,15 @@ int main()
 	Vec2i gridSize(64, 64);
 	float h0 = 25.0f / gridSize.x;
 	auto vel = make_unique<GridMac2f>(gridSize, 1, BufferType::Both, queue);
-	for (int j = -1; j <= gridSize.y + 1; j++)
-		for (int i = -1; i <= gridSize.x + 1; i++) {
-			*vel->ptrU(i, j) = ((float)rand()/RAND_MAX)*2-0.5f;
-			*vel->ptrV(i, j) = ((float)rand()/RAND_MAX)*2-0.5f;
+	for (int j = 0; j < gridSize.y; j++)
+	{
+		for (int i = 0; i < gridSize.x; i++)
+		{
+			Vec2 pos((float)i / gridSize.x, (float)j / gridSize.y);
+			if (pos.x > 0.4 && pos.x < 0.6 && pos.y > 0.2 && pos.y < 0.4)
+				*vel->ptrV(i, j) = 0.5;
 		}
+	}
 	PressureSolver psolve(*vel, h0, queue); 
 	ps = &psolve;
 	
