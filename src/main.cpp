@@ -23,7 +23,7 @@ using namespace std;
 PressureSolver* ps = nullptr;
 extern const char* git_version_short;
 
-bool keyHandler(int key) 
+bool keyHandler(int key, int mods) 
 {
 	switch (key)
 	{
@@ -39,6 +39,9 @@ bool keyHandler(int key)
 		return true;
 	case GLFW_KEY_C:
 		ps->solver.clearZero(0);
+		return true;
+	case GLFW_KEY_P:
+		ps->solve();
 		return true;
 	default:
 		return false;
@@ -58,9 +61,14 @@ int main()
 	auto& queue = gpuQueue;
 
 	// Grids
-	Vec2i gridSize(1024, 1024);
+	Vec2i gridSize(64, 64);
 	float h0 = 25.0f / gridSize.x;
 	auto vel = make_unique<GridMac2f>(gridSize, 1, BufferType::Both, queue);
+	for (int j = -1; j <= gridSize.y + 1; j++)
+		for (int i = -1; i <= gridSize.x + 1; i++) {
+			*vel->ptrU(i, j) = ((float)rand()/RAND_MAX)*2-0.5f;
+			*vel->ptrV(i, j) = ((float)rand()/RAND_MAX)*2-0.5f;
+		}
 	PressureSolver psolve(*vel, h0, queue); 
 	ps = &psolve;
 	
@@ -76,6 +84,7 @@ int main()
 		display.attach(&ps->solver.levels[i]->b, str.str() + "B");
 		display.attach(&ps->solver.levels[i]->r, str.str() + "R");
 	}
+	display.attach(vel.get(), "Velocity");
 
 	// MG Test
 	for (int i = 0; i < gridSize.x; i++)

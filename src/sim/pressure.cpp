@@ -72,9 +72,9 @@ void PressureSolver::solve()
 	set_mac_bc(vel);
 	computeDivergence();
 	solver.solve(residual, 0);
-	computeDivergence(); // just for display
 	correctVelocity();
 	set_mac_bc(vel);
+	computeDivergence(); // just for display
 }
 
 void PressureSolver::computeDivergence()

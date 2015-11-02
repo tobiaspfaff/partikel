@@ -26,7 +26,7 @@ void Grid1f::clear()
 
 
 GridMac2f::GridMac2f(const Vec2i& size, int ghost, BufferType type, CLQueue& queue) :
-	GridBase(size, ghost, size+Vec2i(2*ghost), type),
+	GridBase(size, ghost, size+Vec2i(3*ghost), type),
 	u(queue, layout.x*layout.y, type),
 	v(queue, layout.x*layout.y, type)
 {

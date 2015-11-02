@@ -24,7 +24,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		GLWindow* inst = (GLWindow*)glfwGetWindowUserPointer(window);
 		for (auto& handler : inst->keyHandlers)
 		{
-			if (handler(key))
+			if (handler(key, mods))
 				return;
 		}
 	}

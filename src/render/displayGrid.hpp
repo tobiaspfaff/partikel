@@ -18,6 +18,15 @@ struct DisplayGridInfo
 	std::string name;
 };
 
+struct DisplayVelInfo
+{
+	DisplayVelInfo(GridMac2f* grid, const std::string& name) :
+		grid(grid), name(name) {}
+
+	GridMac2f* grid;
+	std::string name;
+};
+
 struct LineVertex
 {
 	Vec4 color;
@@ -30,23 +39,28 @@ public:
 	DisplayGrid(CLQueue& queue, const Vec2i& maxSize, GLWindow& window);
 
 	void attach(Grid1f* grid, const std::string& name);
-	void render(); 
+	void attach(GridMac2f* grid, const std::string& name);
+	void render();
 	void compute();
 protected:
 	void changeGrid();
-	bool keyHandler(int key);
+	bool keyHandler(int key, int mods);
 
 	GLWindow& window;
 	Vec2i maxSize;
-	std::vector<DisplayGridInfo> displayList;
+	std::vector<DisplayGridInfo> displayRealList;
+	std::vector<DisplayVelInfo> displayVelList;
 	SingleVertexArray<cl_float> vbGrid;
-	SingleVertexArray<LineVertex> vbLines;
+	SingleVertexArray<LineVertex> vbGridLines, vbVelLines;
 	std::unique_ptr<CLVertexBuffer<cl_float> > clGrid;
 	CLKernel fillKernel;
 	std::unique_ptr<ShaderProgram> gridShader, lineShader;
-	int curGrid = -1;
+	int curRealGrid = -1;
+	int curVelGrid = -1;
 	int displayMethod = 0;
-	float mult = 1.0f;
+	int velCentered = 0;
+	float multReal = 1.0f;
+	float multVel = 1.0f;
 };
 
 #endif
