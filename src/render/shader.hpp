@@ -40,7 +40,8 @@ public:
 	~ShaderProgram();
 	void use();
 	int uniform(const char* name);
-	void setUniform(int idx, float v);	
+	void setUniform(int idx, int i);
+	void setUniform(int idx, float v);
 	void setUniform(int idx, const Vec2& v);
 	void setUniform(int idx, const Vec3& v);
 	void setUniform(int idx, const Vec4& v);

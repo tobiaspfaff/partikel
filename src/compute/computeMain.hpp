@@ -48,18 +48,22 @@ public:
 	cl_kernel handle;	
 };
 
+enum class BufferType { None = 0, Host = 1, Gpu = 2, Both = 3 };
+
 template<class T>
 class CLBuffer
 {
 public:
-	CLBuffer(CLQueue& queue, int size);
+	CLBuffer(CLQueue& queue, int size, BufferType type);
 	CLBuffer(CLQueue& queue) : queue(queue) {}
-	void read(std::vector<T>& buffer);
-	void write(const std::vector<T>& buffer);
+	void upload();
+	void download();
 
+	std::vector<T> buffer;
+	BufferType type = BufferType::None;
 	CLQueue& queue;
-	cl_mem handle;
-	int size {0};
+	cl_mem handle = 0;
+	int size = 0;
 };
 
 template<class T>
@@ -77,26 +81,32 @@ public:
 // ------------------------------------
 
 template<class T>
-CLBuffer<T>::CLBuffer(CLQueue& queue, int size) : queue(queue), size(size)
+CLBuffer<T>::CLBuffer(CLQueue& queue, int size, BufferType type) : 
+	queue(queue), size(size), type(type)
 {
 	cl_int err;
-	this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T)*size, nullptr, &err);
+	if (type == BufferType::Gpu || type == BufferType::Both)
+		this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T)*size, nullptr, &err);
+	if (type == BufferType::Host || type == BufferType::Both)
+		buffer.resize(size);
 	clTest(err, "create cl buffer");
 }
 
 template<class T>
-void CLBuffer<T>::read(std::vector<T>& buffer)
+void CLBuffer<T>::download()
 {
-	buffer.resize(size);
+	if (type != BufferType::Both)
+		fatalError("Try to read from a Host/GPU only buffer");
 	clTest(clEnqueueReadBuffer(queue.handle, handle, CL_TRUE, 0, sizeof(T)*size, 
 							   &buffer[0], 0, nullptr, nullptr), "read buffer");
 }
 
 template<class T>
-void CLBuffer<T>::write(const std::vector<T>& buffer)
+void CLBuffer<T>::upload()
 {
-	size = buffer.size();
-	clTest(clEnqueueWriteBuffer(queue.handle, handle, CL_TRUE, 0, sizeof(T)*size, 
+	if (type != BufferType::Both)
+		fatalError("Try to write to a Host/GPU only buffer");
+	clTest(clEnqueueWriteBuffer(queue.handle, handle, CL_TRUE, 0, sizeof(T)*size,
 						 	    &buffer[0], 0, nullptr, nullptr), "write buffer");
 }
 
@@ -105,6 +115,7 @@ CLVertexBuffer<T>::CLVertexBuffer(CLQueue& queue, SingleVertexArray<T>& va) :
 	CLBuffer(queue)
 {
 	cl_int err;
+	this->type = BufferType::Gpu;
 	this->size = va.buffer.size;
 	this->handle = clCreateFromGLBuffer(queue.context, CL_MEM_WRITE_ONLY, va.buffer.handle, &err);
 	clTest(err, "create cl/gl buffer");

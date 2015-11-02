@@ -6,6 +6,14 @@
 
 using namespace std;
 
+MGLevel::MGLevel(const Vec2i& size, float h, CLQueue& queue) :
+	h(h), dim(size),
+	u(size, 1, BufferType::Both, queue),
+	r(size, 1, BufferType::Both, queue),
+	b(size, 1, BufferType::Both, queue)
+{
+}
+
 BC::BC(Type type, float value, float h) : type(type)
 {
 	if (type == Type::Dirichlet)
@@ -26,7 +34,7 @@ inline bool isPowerOf2(int x)
 }
 
 
-MultigridPoisson::MultigridPoisson(const Vec2i& size, float h0)
+MultigridPoisson::MultigridPoisson(const Vec2i& size, float h0, CLQueue& queue)
 {
 	if (!isPowerOf2(size.x) || !isPowerOf2(size.y))
 		fatalError("Multigrid solver only supports 2^n grids.");
@@ -40,14 +48,7 @@ MultigridPoisson::MultigridPoisson(const Vec2i& size, float h0)
 	float h = h0;
 	while (lSize.x > 4 && lSize.y > 4)
 	{
-		auto level = make_unique<MGLevel>();
-		level->dim = lSize;
-		level->h = h;
-		level->u.resize( (lSize.x+2) * (lSize.y+2) );
-		level->b.resize(level->u.size());
-		level->r.resize(level->u.size());
-		levels.push_back(move(level));
-
+		levels.emplace_back(new MGLevel(lSize, h, queue));
 		lSize = Vec2i(lSize.x / 2, lSize.y / 2);
 		h *= 2.0f;
 	}
@@ -71,21 +72,22 @@ bool MultigridPoisson::solve(float& residual, float tolerance)
 
 void MultigridPoisson::clearZero(int level)
 {
-	fill(levels[level]->u.begin(), levels[level]->u.end(), 0.0f);
+	levels[level]->u.clear();
 }
 
 void MultigridPoisson::applyBC(int level)
 {
-	Vec2i size = levels[level]->dim;
-	int DX = 1;
-	int DY = size.x + 2;
+	Grid1f& u = levels[level]->u;
+	Vec2i size = u.size;
+	const int DX = 1;
+	const int DY = u.stride();
 	float valPosX = (level == 0) ? (bcPosX.ghost) : 0;
 	float valPosY = (level == 0) ? (bcPosY.ghost) : 0;
 	float valNegX = (level == 0) ? (bcNegX.ghost) : 0;
 	float valNegY = (level == 0) ? (bcNegY.ghost) : 0;
 
 	// x pos bnd
-	float* ptr = &levels[level]->u[DY + DX * (size.x + 1)];
+	float* ptr = u.ptr(size.x, 0);
 	for (int j = 0; j < size.y; j++)
 	{
 		*ptr = valPosX - bcPosX.M * ptr[-DX];
@@ -93,7 +95,7 @@ void MultigridPoisson::applyBC(int level)
 	}
 
 	// x neg bnd
-	ptr = &levels[level]->u[DY];
+	ptr = u.ptr(-1, 0);
 	for (int j = 0; j < size.y; j++)
 	{
 		*ptr = valNegX - bcNegX.M * ptr[DX];
@@ -101,7 +103,7 @@ void MultigridPoisson::applyBC(int level)
 	}
 
 	// y pos bnd
-	ptr = &levels[level]->u[DX + DY * (size.y + 1)];
+	ptr = u.ptr(0, size.y);
 	for (int j = 0; j < size.x; j++)
 	{
 		*ptr = valPosY - bcPosY.M * ptr[-DY];
@@ -109,86 +111,22 @@ void MultigridPoisson::applyBC(int level)
 	}
 
 	// y neg bnd
-	ptr = &levels[level]->u[DX];
+	ptr = u.ptr(0, -1);
 	for (int j = 0; j < size.x; j++)
 	{
 		*ptr = valNegY - bcNegY.M * ptr[DY];
 		ptr += DX;
 	}
 	// corners
-	ptr = &levels[level]->u[0];
+	ptr = u.ptr(-1, -1);
 	*ptr = 0.5* (ptr[ DX] + ptr[ DY]);
-	ptr = &levels[level]->u[DX*(size.x+1)];
+	ptr = u.ptr(size.x, -1);
 	*ptr = 0.5* (ptr[-DX] + ptr[ DY]);
-	ptr = &levels[level]->u[DY*(size.y+1)];
+	ptr = u.ptr(-1, size.y);
 	*ptr = 0.5* (ptr[ DX] + ptr[-DY]);
-	ptr = &levels[level]->u[DX*(size.x+1)+DY*(size.y+1)];
+	ptr = u.ptr(size.x, size.y);
 	*ptr = 0.5* (ptr[-DX] + ptr[-DY]);
 }
-
-void MultigridPoisson::relaxCPU(float* h_u, float* h_b, const Vec2i& size, float h, int redBlack)
-{
-	const float h2 = sq(h);
-	int DX = 1;
-	int DY = size.x + 2;
-
-	for (int j = 0; j < size.y; j++) 
-	{
-		int i_start = (j + redBlack) % 2;
-		int idx = (j+1)*DY + i_start + DX;
-		float* ptrB = &h_b[idx];
-		float* ptrU = &h_u[idx];
-		float M0 = 4;
-		if (j == 0)
-			M0 += bcNegY.M;
-		else if (j == size.y - 1)
-			M0 += bcPosY.M;
-
-		for (int i = i_start; i < size.x; i += 2) {
-			float M = M0;
-			if (i == 0) 
-				M += bcNegX.M;
-			if (i == size.x - 1)
-				M += bcPosX.M;
-			
-			float u0 = *ptrU;
-			float eq = ptrU[-DX] + ptrU[DX] + ptrU[-DY] + ptrU[DY] - h2 * (*ptrB) - 4 * u0;
-			*ptrU = u0 + omega * eq / M; // SOR
-			ptrB += 2;
-			ptrU += 2;
-		}
-	}
-}
-
-static void computeResidualCPU(float* h_u, float* h_b, float* h_r, const Vec2i& size, float h, float& linf, float& l2)
-{
-	const float h2Inv = 1.0f / sq(h);
-	int DX = 1;
-	int DY = size.x + 2;
-	linf = 0;
-	double l2d = 0;
-
-	for (int j = 0; j < size.y; j++)
-	{
-		int idx = (j+1)*DY + DX;
-		float* ptrB = &h_b[idx];
-		float* ptrU = &h_u[idx];
-		float* ptrR = &h_r[idx];
-
-		for (int i = 0; i < size.x; i++) {
-			float residual = (*ptrB) - h2Inv * (ptrU[-DX] + ptrU[DX] + ptrU[-DY] + ptrU[DY] - 4*(*ptrU));
-			*ptrR = residual;
-			linf = max(linf, fabs(residual));
-			l2d += sq(residual);
-			ptrB++;
-			ptrR++;
-			ptrU++;
-		}
-	}	
-	l2d /= size.x * size.y;
-	l2 = (float)l2d;
-}
-
 
 void MultigridPoisson::vcycle(int fine)
 {
@@ -265,28 +203,50 @@ bool MultigridPoisson::doFMG(float& residual, float tolerance)
 
 void MultigridPoisson::computeResidual(int level, float& linf, float& l2)
 {
-	computeResidualCPU(&levels[level]->u[0], &levels[level]->b[0], &levels[level]->r[0], levels[level]->dim, levels[level]->h, linf, l2);
+	MGLevel& l= *levels[level];
+	const int DX = 1;
+	const int DY = l.u.stride();
+	const float h2Inv = 1.0f / sq(l.h);
+	linf = 0;
+	double l2d = 0;
+
+	for (int j = 0; j < l.dim.y; j++)
+	{
+		float* ptrB = l.b.ptr(0, j);
+		float* ptrU = l.u.ptr(0, j);
+		float* ptrR = l.r.ptr(0, j);
+		
+		for (int i = 0; i < l.dim.x; i++) {
+			float residual = (*ptrB) - h2Inv * (ptrU[-DX] + ptrU[DX] + ptrU[-DY] + ptrU[DY] - 4 * (*ptrU));
+			*ptrR = residual;
+			linf = max(linf, fabs(residual));
+			l2d += sq(residual);
+			ptrB++;
+			ptrR++;
+			ptrU++;
+		}
+	}
+	l2d /= l.dim.x * l.dim.y;
+	l2 = (float)l2d;
 }
 
 void MultigridPoisson::prolongV(int level)
 {
-	Vec2i sizeSrc = levels[level]->dim;
-	Vec2i sizeDst = levels[level - 1]->dim;
+	Grid1f& srcGrid = levels[level]->u;
+	Grid1f& dstGrid = levels[level - 1]->u;
 	int DX_SRC = 1;
-	int DY_SRC = sizeSrc.x + 2;
+	int DY_SRC = srcGrid.stride();
 	int DX_DST = 1;
-	int DY_DST = sizeDst.x + 2;
-	float* h_src = &levels[level]->u[DX_SRC + DY_SRC];
-	float* h_dst = &levels[level - 1]->u[DX_DST + DY_DST];
-
+	int DY_DST = dstGrid.stride();
+	
 	const float c0 = 9.0f / 16.0f, c1 = 3.0f / 16.0f, c2 = 1.0f / 16.0f;
 
-	for (int j = 0; j < sizeSrc.y; j++)
+	for (int j = 0; j < srcGrid.size.y; j++)
 	{
-		float* src = &h_src[j * DY_SRC];
-		float* dst = &h_dst[2 * j * DY_DST];
-
-		for (int i = 0; i < sizeSrc.x; i++) {
+		float* src = srcGrid.ptr(0, j); 
+		float* dst = dstGrid.ptr(0, 2*j);
+		
+		for (int i = 0; i < srcGrid.size.x; i++) {
 			float v0 = c0 * src[0];
 			dst[0]             += v0 + c1 * (src[-DX_SRC] + src[-DY_SRC]) + c2 * src[-DX_SRC - DY_SRC];
 			dst[DX_DST]        += v0 + c1 * (src[ DX_SRC] + src[-DY_SRC]) + c2 * src[ DX_SRC - DY_SRC];
@@ -301,24 +261,55 @@ void MultigridPoisson::prolongV(int level)
 
 void MultigridPoisson::restrictResidual(int level)
 {
-	Vec2i sizeSrc = levels[level - 1]->dim;
-	Vec2i sizeDst = levels[level]->dim;
+	Grid1f& srcGrid = levels[level - 1]->r;
+	Grid1f& dstGrid = levels[level]->b;
 	int DX_SRC = 1;
-	int DY_SRC = sizeSrc.x + 2;
+	int DY_SRC = srcGrid.stride();
 	int DX_DST = 1;
-	int DY_DST = sizeDst.x + 2;
-	float* h_src = &levels[level - 1]->r[DX_SRC + DY_SRC];
-	float* h_dst = &levels[level]->b[DX_DST + DY_DST];
-
-	for (int j = 0; j < sizeDst.y; j++)
+	int DY_DST = dstGrid.stride();
+	
+	for (int j = 0; j < dstGrid.size.y; j++)
 	{
-		float* src = &h_src[2 * j * DY_SRC];
-		float* dst = &h_dst[j * DY_DST];
-
-		for (int i = 0; i < sizeDst.x; i++) {
+		float* src = srcGrid.ptr(0, 2 * j);
+		float* dst = dstGrid.ptr(0, j);
+		
+		for (int i = 0; i < dstGrid.size.x; i++) {
 			*dst = 0.25 * (src[0] + src[DX_SRC] + src[DY_SRC] + src[DX_SRC + DY_SRC]);
 			dst++;
 			src += 2;
+		}
+	}
+}
+
+void MultigridPoisson::relaxCPU(Grid1f& u, Grid1f& b, const Vec2i& size, float h, int redBlack)
+{
+	const float h2 = sq(h);
+	int DX = 1;
+	int DY = u.stride();
+
+	for (int j = 0; j < size.y; j++)
+	{
+		int i_start = (j + redBlack) % 2;
+		float* ptrB = b.ptr(i_start, j);
+		float* ptrU = u.ptr(i_start, j);
+		float M0 = 4;
+		if (j == 0)
+			M0 += bcNegY.M;
+		else if (j == size.y - 1)
+			M0 += bcPosY.M;
+
+		for (int i = i_start; i < size.x; i += 2) {
+			float M = M0;
+			if (i == 0)
+				M += bcNegX.M;
+			if (i == size.x - 1)
+				M += bcPosX.M;
+
+			float u0 = *ptrU;
+			float eq = ptrU[-DX] + ptrU[DX] + ptrU[-DY] + ptrU[DY] - h2 * (*ptrB) - 4 * u0;
+			*ptrU = u0 + omega * eq / M; // SOR
+			ptrB += 2;
+			ptrU += 2;
 		}
 	}
 }
@@ -329,7 +320,7 @@ void MultigridPoisson::relax(int level, int iterations, bool reverse)
 	{
 		for (int redBlack = 0; redBlack < 2; redBlack++) 
 		{
-			relaxCPU(&levels[level]->u[0], &levels[level]->b[0], levels[level]->dim, levels[level]->h, reverse ? (1 - redBlack) : redBlack);
+			relaxCPU(levels[level]->u, levels[level]->b, levels[level]->dim, levels[level]->h, reverse ? (1 - redBlack) : redBlack);
 		}
 		applyBC(level);
 	}	

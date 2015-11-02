@@ -80,3 +80,8 @@ bool GLWindow::poll()
 	glfwPollEvents();
 	return !glfwWindowShouldClose(window);
 }
+
+void GLWindow::setTitle(const string& text)
+{
+	glfwSetWindowTitle(window, text.c_str());
+}

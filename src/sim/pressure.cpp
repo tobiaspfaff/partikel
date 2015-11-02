@@ -2,17 +2,17 @@
 
 using namespace std;
 
-static void set_mac_bc(float* u, float* v, const Vec2i& size)
+static void set_mac_bc(GridMac2f& grid)
 {
 	const Vec2 bc(0, 0);
 	const int DX = 1;
-	const int DY = size.x + 3;
-	const int NX = size.x;
-	const int NY = size.y;
+	const int DY = grid.stride();
+	const int NX = grid.size.x;
+	const int NY = grid.size.y;
 
 	// u:x bnd
-	float* ptr = &u[0];
-	for (int j = 0; j < size.y + 3; j++)
+	float* ptr = grid.ptrU(-1, -1);
+	for (int j = 0; j < NY + 3; j++)
 	{
 		ptr[0] = bc.x;
 		ptr[DX] = bc.x;
@@ -22,8 +22,8 @@ static void set_mac_bc(float* u, float* v, const Vec2i& size)
 	}
 
 	// v:y bnd
-	ptr = &v[0];
-	for (int j = 0; j < size.x + 3; j++)
+	ptr = grid.ptrV(-1, -1);
+	for (int j = 0; j < NX + 3; j++)
 	{
 		ptr[0] = bc.y;
 		ptr[DY] = bc.y;
@@ -33,8 +33,8 @@ static void set_mac_bc(float* u, float* v, const Vec2i& size)
 	}
 
 	// u:y bnd
-	ptr = &u[2 * DX];
-	for (int j = 2; j <= size.x; j++)
+	ptr = grid.ptrU(1, -1);
+	for (int j = 2; j <= NX; j++)
 	{
 		ptr[0] = ptr[DY];
 		ptr[DY*(NY + 1)] = ptr[DY*NY];
@@ -42,8 +42,8 @@ static void set_mac_bc(float* u, float* v, const Vec2i& size)
 	}
 
 	// v:x bnd
-	ptr = &v[2 * DY];
-	for (int j = 2; j <= size.y; j++)
+	ptr = grid.ptrV(-1, 1);
+	for (int j = 2; j <= NY; j++)
 	{
 		ptr[0] = ptr[DX];
 		ptr[DX*(NX + 1)] = ptr[DX*NX];
@@ -52,44 +52,44 @@ static void set_mac_bc(float* u, float* v, const Vec2i& size)
 }
 
 
-PressureSolver::PressureSolver(GridMac2f& vel, float h) :
-solver(vel.size, h), size(vel.size), vel(vel), h(h)
+PressureSolver::PressureSolver(GridMac2f& vel, float h, CLQueue& queue) :
+	solver(vel.size, h, queue), size(vel.size), vel(vel), h(h)
 {
-	solver.nuV = 15;
+	solver.nuV = 2;
 	BC bc(BC::Type::Neumann, 0, h); // forced inflow variable slip
 	solver.bcNegX = bc;
 	solver.bcNegY = bc;
 	solver.bcPosX = bc;
 	solver.bcPosY = bc;
 
-	pressure = solver.getU0();
-	divergence = solver.getB0();	
+	pressure = &solver.getU0();
+	divergence = &solver.getB0();	
 }
 
 void PressureSolver::solve()
 {
 	float residual;
-	set_mac_bc(&vel.u[0], &vel.v[0], size);
+	set_mac_bc(vel);
 	computeDivergence();
 	solver.solve(residual, 0);
 	computeDivergence(); // just for display
 	correctVelocity();
-	set_mac_bc(&vel.u[0], &vel.v[0], size);
+	set_mac_bc(vel);
 }
 
 void PressureSolver::computeDivergence()
 {
 	const int DX = 1;
-	const int DY = size.x + 3;
+	const int DY = vel.stride();
 	const float invh = 1.0f / h;
 	double total = 0;
 
 	for (int j = 0; j < size.y; j++)
 	{
-		float* ptrU = &vel.u[DX + (j + 1)*DY];
-		float* ptrV = &vel.v[DX + (j + 1)*DY];
-		float* ptrD = &divergence[DX + (j + 1)*DY];
-
+		float* ptrU = vel.ptrU(0, j);
+		float* ptrV = vel.ptrV(0, j);
+		float* ptrD = divergence->ptr(0, j);
+		
 		for (int i = 0; i < size.x; i++)
 		{
 			float div = invh * (ptrU[DX] - ptrU[0] + ptrV[DY] - ptrV[0]);
@@ -106,14 +106,14 @@ void PressureSolver::computeDivergence()
 void PressureSolver::correctVelocity()
 {
 	const int DX = 1;
-	const int DY = size.x + 3;
+	const int DY = pressure->stride();
 	const float invh = 1.0f / h;
 	
 	for (int j = 0; j < size.y; j++)
 	{
-		float* ptrU = &vel.u[DX + (j + 1)*DY];
-		float* ptrV = &vel.v[DX + (j + 1)*DY];
-		float* ptrP = &pressure[DX + (j + 1)*DY];
+		float* ptrU = vel.ptrU(0, j);
+		float* ptrV = vel.ptrV(0, j);
+		float* ptrP = pressure->ptr(0, j);
 
 		for (int i = 0; i < size.x; i++)
 		{

@@ -24,6 +24,7 @@ set(SOURCES
     src/compute/computeMain.cpp
     src/dependencies/stb_image.cpp
     src/render/colors.cpp
+    src/render/displayGrid.cpp
     src/render/window.cpp
     src/render/shader.cpp
     src/render/texture.cpp
@@ -37,6 +38,7 @@ set(SOURCES
 set(HEADERS
 	src/compute/computeMain.hpp
     src/render/colors.hpp
+    src/render/displayGrid.hpp
     src/render/opengl.hpp
     src/render/window.hpp
     src/render/shader.hpp

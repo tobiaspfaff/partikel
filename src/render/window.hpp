@@ -17,6 +17,7 @@ public:
 	void clearBuffer();
 	void swap();
 	bool poll(); // return false if closed
+	void setTitle(const std::string& title);
 
 	std::vector<std::function<bool(int)> > keyHandlers;
 };

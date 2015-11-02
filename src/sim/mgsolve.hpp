@@ -6,14 +6,15 @@
 #include <vector>
 #include <memory>
 #include "tools/vectors.hpp"
+#include "sim/grid.hpp"
 
 struct MGLevel 
 {
+	MGLevel(const Vec2i& size, float h, CLQueue& queue);
+
 	float h;
 	Vec2i dim;
-	std::vector<float> u;
-	std::vector<float> b;
-	std::vector<float> r;
+	Grid1f u, b, r;
 };
 
 struct BC 
@@ -31,10 +32,10 @@ class MultigridPoisson
 {
 public:
 	
-	MultigridPoisson(const Vec2i& size, float h);
+	MultigridPoisson(const Vec2i& size, float h, CLQueue& queue);
 	bool solve(float& residual, float tolerance);
-	inline float* getB0() { return &levels[0]->b[0]; }
-	inline float* getU0() { return &levels[0]->b[0]; }
+	inline Grid1f& getB0() { return levels[0]->b; }
+	inline Grid1f& getU0() { return levels[0]->u; }
 
 	std::vector<std::unique_ptr<MGLevel> > levels;
 	
@@ -46,7 +47,7 @@ public:
 
 	BC bcPosX, bcNegX, bcPosY, bcNegY;
 
-protected:
+//protected:
 	void computeResidual(int level, float& linf, float& l2);
 	void restrictResidual(int level);
 	void prolongV(int level);
@@ -55,7 +56,7 @@ protected:
 	bool doFMG(float& residual, float tolerance);
 	void vcycle(int fine);
 	void applyBC(int level);
-	void relaxCPU(float* h_u, float* h_b, const Vec2i& size, float h, int redBlack);
+	void relaxCPU(Grid1f& u, Grid1f& b, const Vec2i& size, float h, int redBlack);
 };
 
 #endif

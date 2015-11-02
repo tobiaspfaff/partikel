@@ -2,50 +2,45 @@
 
 using namespace std;
 
-Grid1f::Grid1f(const Vec2i& size, int ghost, CLQueue& queue) : 
-	GridBase(size, size+Vec2i(2*ghost)), 
-	cl(queue, layout.x*layout.y) 
+Grid1f::Grid1f(const Vec2i& size, int ghost, BufferType type, CLQueue& queue) :
+	GridBase(size, ghost, size+Vec2i(2*ghost), type), 
+	data(queue, layout.x*layout.y, type) 
 {
-}
-
-void Grid1f::allocHost()
-{
-	host.resize(cl.size);
 }
 
 void Grid1f::upload()
 {
-	cl.write(host);
+	data.upload();
 }
 
 void Grid1f::download()
 {
-	cl.read(host);
+	data.download();
+}
+
+void Grid1f::clear()
+{
+	if (type == BufferType::Host || type == BufferType::Both)
+		fill(data.buffer.begin(), data.buffer.end(), 0.0f);
 }
 
 
-GridMac2f::GridMac2f(const Vec2i& size, int ghost, CLQueue& queue) :
-	GridBase(size, size+Vec2i(2*ghost)),
-	clU(queue, layout.x*layout.y),
-	clV(queue, layout.x*layout.y)
+GridMac2f::GridMac2f(const Vec2i& size, int ghost, BufferType type, CLQueue& queue) :
+	GridBase(size, ghost, size+Vec2i(2*ghost), type),
+	u(queue, layout.x*layout.y, type),
+	v(queue, layout.x*layout.y, type)
 {
-}
-
-void GridMac2f::allocHost()
-{
-	u.resize(clU.size);
-	v.resize(clV.size);
 }
 
 void GridMac2f::upload()
 {
-	clU.write(u);
-	clV.write(v);
+	u.upload();
+	v.upload();	
 }
 
 void GridMac2f::download()
 {
-	clU.read(u);
-	clV.read(v);
+	u.download();
+	v.download();
 }
 

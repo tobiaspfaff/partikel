@@ -93,6 +93,11 @@ void ShaderProgram::use()
 	glUseProgram(handle);
 }
 
+void ShaderProgram::setUniform(int idx, int v)
+{
+	glProgramUniform1i(handle, idx, v);
+}
+
 void ShaderProgram::setUniform(int idx, float v)
 {
 	glProgramUniform1f(handle, idx, v);
