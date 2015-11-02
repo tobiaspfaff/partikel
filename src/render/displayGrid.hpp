@@ -18,6 +18,12 @@ struct DisplayGridInfo
 	std::string name;
 };
 
+struct LineVertex
+{
+	Vec4 color;
+	Vec2 pos;	
+};
+
 class DisplayGrid
 {
 public:
@@ -27,16 +33,17 @@ public:
 	void render(); 
 	void compute();
 protected:
-	void updateTitle();
+	void changeGrid();
 	bool keyHandler(int key);
 
 	GLWindow& window;
 	Vec2i maxSize;
 	std::vector<DisplayGridInfo> displayList;
 	SingleVertexArray<cl_float> vbGrid;
+	SingleVertexArray<LineVertex> vbLines;
 	std::unique_ptr<CLVertexBuffer<cl_float> > clGrid;
 	CLKernel fillKernel;
-	ShaderProgram gridShader;
+	std::unique_ptr<ShaderProgram> gridShader, lineShader;
 	int curGrid = -1;
 	int displayMethod = 0;
 	float mult = 1.0f;

@@ -87,8 +87,8 @@ int main()
 			bool ip = c.y > 0.3 && c.y < 0.6 && c.x > 0.2 && c.x < 0.3;
 			bool im = c.y > 0.3 && c.y < 0.6 && c.x > 0.5 && c.x < 0.6;
 			*ptr = 0;
-			if (ip) *ptr = 0.1;
-			if (im) *ptr = -0.1;
+			if (ip) *ptr = 0.1f;
+			if (im) *ptr = -0.1f;
 		}
 	}
 
