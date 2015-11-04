@@ -1,4 +1,5 @@
 #include "sim/semilagrange.hpp"
+#include "sim/pressure.hpp"
 
 using namespace std;
 
@@ -46,20 +47,21 @@ inline float interpol(float* u, const Vec2i& size, int DY, const Vec2& pos)
 	float *p = &u[xi + DY * yi];
 	float t0 = 1. - t1, s0 = 1. - s1;
 
-	return (p[0]  * t0 + p[DY]      * t1) * s1
-		 + (p[DX] * t0 + p[DX + DY] * t1) * s0;
+	return (p[0]  * t0 + p[DY]      * t1) * s0
+		 + (p[DX] * t0 + p[DX + DY] * t1) * s1;
 }
 
-void semiLagrangeSelfAdvect(GridMac2f& velSrc, GridMac2f& velDst, float dt, float h)
+void semiLagrangeSelfAdvect(GridMac2f& velSrc, GridMac2f& temp, float dt, float h)
 {
+	set_mac_bc(temp);
+	set_mac_bc(velSrc);
+
 	const int DX = 1;
 	const int DY = velSrc.stride();
-	const float invh = 1.0f / h;
-	double total = 0;
 	float* u = velSrc.ptrU();
 	float* v = velSrc.ptrV();
-	float *uDst = velDst.ptrU();
-	float *vDst = velDst.ptrV();
+	float *uDst = temp.ptrU();
+	float *vDst = temp.ptrV();
 	float dth = dt / h;
 	Vec2i clampSizeU(velSrc.size.x + 1, velSrc.size.y);
 	Vec2i clampSizeV(velSrc.size.x, velSrc.size.y + 1);
@@ -71,14 +73,15 @@ void semiLagrangeSelfAdvect(GridMac2f& velSrc, GridMac2f& velDst, float dt, floa
 		{
 			int idx = idx0 + i;
 			Vec2 velAtX(u[idx], 0.25 * (v[idx] + v[idx + DY] + v[idx - DX] + v[idx - DX + DY]));
-			Vec2 velAtY(0.25 * (u[idx] + u[idx + DX] + u[idx - DY] + v[idx + DX - DY], v[idx]));
+			Vec2 velAtY(0.25 * (u[idx] + u[idx + DX] + u[idx - DY] + u[idx + DX - DY]), v[idx]);
 
-			Vec2 xpos = Vec2(i, j) - dth * velAtX;
-			Vec2 ypos = Vec2(i, j) - dth * velAtY;
-
+			Vec2 xpos = Vec2((float)i, (float)j) - dth * velAtX;
+			Vec2 ypos = Vec2((float)i, (float)j) - dth * velAtY;
+			
 			uDst[idx] = interpol(u, clampSizeU, DY, xpos);
-			vDst[idx] = interpol(v, clampSizeV, DY, xpos);
+			vDst[idx] = interpol(v, clampSizeV, DY, ypos);
 		}
 	}
+	velSrc.swap(temp);
 }
 

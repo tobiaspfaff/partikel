@@ -2,7 +2,7 @@
 
 using namespace std;
 
-static void set_mac_bc(GridMac2f& grid)
+void set_mac_bc(GridMac2f& grid)
 {
 	const Vec2 bc(0, 0);
 	const int DX = 1;

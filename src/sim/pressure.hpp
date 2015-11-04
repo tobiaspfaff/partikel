@@ -6,6 +6,8 @@
 #include "sim/mgsolve.hpp"
 #include "sim/grid.hpp"
 
+void set_mac_bc(GridMac2f& grid);
+
 class PressureSolver 
 {
 public:

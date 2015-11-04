@@ -1,4 +1,5 @@
 #include "sim/grid.hpp"
+#include <cassert>
 
 using namespace std;
 
@@ -24,6 +25,12 @@ void Grid1f::clear()
 		fill(data.buffer.begin(), data.buffer.end(), 0.0f);
 }
 
+void Grid1f::swap(Grid1f& grid)
+{
+	assert(layout == grid.layout);
+	assert(size == grid.size);
+	data.swap(grid.data);
+}
 
 GridMac2f::GridMac2f(const Vec2i& size, int ghost, BufferType type, CLQueue& queue) :
 	GridBase(size, ghost, size+Vec2i(3*ghost), type),
@@ -44,3 +51,10 @@ void GridMac2f::download()
 	v.download();
 }
 
+void GridMac2f::swap(GridMac2f& grid)
+{
+	assert(layout == grid.layout);
+	assert(size == grid.size);
+	u.swap(grid.u);
+	v.swap(grid.v);
+}

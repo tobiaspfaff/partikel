@@ -25,12 +25,14 @@ set(SOURCES
     src/dependencies/stb_image.cpp
     src/render/colors.cpp
     src/render/displayGrid.cpp
+    src/render/displayParticle.cpp
     src/render/window.cpp
     src/render/shader.cpp
     src/render/texture.cpp
     src/render/vertexArray.cpp
     src/sim/grid.cpp
 	src/sim/mgsolve.cpp
+	src/sim/particle.cpp
 	src/sim/pressure.cpp
 	src/sim/semilagrange.cpp
     src/tools/log.cpp
@@ -40,6 +42,7 @@ set(HEADERS
 	src/compute/computeMain.hpp
     src/render/colors.hpp
     src/render/displayGrid.hpp
+    src/render/displayParticle.hpp
     src/render/opengl.hpp
     src/render/window.hpp
     src/render/shader.hpp
@@ -47,7 +50,8 @@ set(HEADERS
     src/render/vertexArray.hpp
     src/sim/grid.hpp
 	src/sim/mgsolve.hpp    
-	src/sim/pressure.hpp
+	src/sim/particle.hpp
+    src/sim/pressure.hpp
     src/sim/semilagrange.hpp
     src/tools/log.hpp
 )
@@ -125,7 +129,7 @@ if (DEBUG)
 else()
     SET(EXECCMD partikel)
 	if (WIN32)
-		
+		set(AS_FLAGS "${AS_FLAGS} /DNEBUG" )
 	else()
 		set(AS_FLAGS "${AS_FLAGS} -O3" )
 	endif()

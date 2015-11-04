@@ -3,6 +3,6 @@
 
 #include "sim/grid.hpp"
 
-void semiLagrangeSelfAdvect(GridMac2f& velSrc, GridMac2f& velDst, float dt);
+void semiLagrangeSelfAdvect(GridMac2f& velSrc, GridMac2f& temp, float dt, float h);
 
 #endif

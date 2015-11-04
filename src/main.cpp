@@ -11,6 +11,7 @@
 #include "tools/log.hpp"
 #include "compute/computeMain.hpp"
 #include "sim/grid.hpp"
+#include "sim/semilagrange.hpp"
 #include "sim/mgsolve.hpp"
 #include "sim/pressure.hpp"
 #include "render/shader.hpp"
@@ -20,14 +21,18 @@
 
 using namespace std;
 
+/*GridMac2f* tempGrid;
+GridMac2f* velGrid;
 PressureSolver* ps = nullptr;
+float h0;*/
+
 extern const char* git_version_short;
 
 bool keyHandler(int key, int mods) 
 {
 	switch (key)
 	{
-	case GLFW_KEY_R:
+	/*case GLFW_KEY_R:
 		ps->solver.relax(0, 100, false);
 		return true;
 	case GLFW_KEY_F:
@@ -44,8 +49,8 @@ bool keyHandler(int key, int mods)
 		ps->solve();
 		return true;
 	case GLFW_KEY_A:
-		ps->solve();
-		return true;
+		semiLagrangeSelfAdvect(*velGrid, *tempGrid, 1, h0);
+		return true;*/
 	default:
 		return false;
 	}
@@ -64,9 +69,10 @@ int main()
 	auto& queue = gpuQueue;
 
 	// Grids
-	Vec2i gridSize(64, 64);
-	float h0 = 25.0f / gridSize.x;
+	/*Vec2i gridSize(256,256);
+	h0 = 25.0f / gridSize.x;
 	auto vel = make_unique<GridMac2f>(gridSize, 1, BufferType::Both, queue);
+	auto temp = make_unique<GridMac2f>(gridSize, 1, BufferType::Both, queue);
 	for (int j = 0; j < gridSize.y; j++)
 	{
 		for (int i = 0; i < gridSize.x; i++)
@@ -78,23 +84,25 @@ int main()
 	}
 	PressureSolver psolve(*vel, h0, queue); 
 	ps = &psolve;
+	velGrid = vel.get();
+	tempGrid = temp.get();*/
 	
 	// Display handler
-	DisplayGrid display(queue, gridSize + Vec2i(4), *window);
+	//DisplayGrid display(queue, gridSize + Vec2i(4), *window);
 	//display.attach(psolve.pressure, "Pressure");
 	//display.attach(psolve.divergence, "Divergence");
-	for (int i = 0; i < ps->solver.levels.size(); i++)
+	/*for (int i = 0; i < ps->solver.levels.size(); i++)
 	{
 		stringstream str;
 		str << "Level " << i << " ";
 		display.attach(&ps->solver.levels[i]->u, str.str() + "U");
 		display.attach(&ps->solver.levels[i]->b, str.str() + "B");
 		display.attach(&ps->solver.levels[i]->r, str.str() + "R");
-	}
-	display.attach(vel.get(), "Velocity");
-
+	}*/
+	//display.attach(vel.get(), "Velocity");
+	
 	// MG Test
-	for (int i = 0; i < gridSize.x; i++)
+	/*for (int i = 0; i < gridSize.x; i++)
 	{
 		for (int j = 0; j < gridSize.y; j++) 
 		{
@@ -106,18 +114,21 @@ int main()
 			if (ip) *ptr = 0.1f;
 			if (im) *ptr = -0.1f;
 		}
-	}
+	}*/
 
 	while(window->poll()) 
 	{
+		//ps->solve();
+		//semiLagrangeSelfAdvect(*velGrid, *tempGrid, 1, h0);
+
 		glFinish();
-		display.compute();
+		//display.compute();
 		clFinish(queue.handle);
 
 		window->clearBuffer();
 		//glEnable(GL_BLEND);
 		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		display.render();
+		//display.render();
 		window->swap();
 	}
 

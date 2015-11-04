@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <map>
+#include <cassert>
 #include <memory>
 #include "render/vertexArray.hpp"
 #include "compute/opencl.hpp"
@@ -58,6 +59,7 @@ public:
 	CLBuffer(CLQueue& queue) : queue(queue) {}
 	void upload();
 	void download();
+	void swap(CLBuffer<T>& other);
 
 	std::vector<T> buffer;
 	BufferType type = BufferType::None;
@@ -108,6 +110,15 @@ void CLBuffer<T>::upload()
 		fatalError("Try to write to a Host/GPU only buffer");
 	clTest(clEnqueueWriteBuffer(queue.handle, handle, CL_TRUE, 0, sizeof(T)*size,
 						 	    &buffer[0], 0, nullptr, nullptr), "write buffer");
+}
+
+template<class T>
+void CLBuffer<T>::swap(CLBuffer<T>& other)
+{
+	assert(&queue == &other.queue);
+	assert(size == other.size);
+	std::swap(handle, other.handle);
+	buffer.swap(other.buffer);
 }
 
 template<class T>

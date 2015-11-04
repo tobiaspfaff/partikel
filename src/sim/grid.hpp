@@ -23,6 +23,7 @@ public:
 	void upload();
 	void download();
 	void clear();
+	void swap(Grid1f& grid);
 
 	inline float* ptr() { return &data.buffer[ghost + ghost*layout.x]; }
 	inline float* ptr(int x, int y) { return &data.buffer[(ghost+x) + (ghost+y)*layout.x]; }
@@ -36,6 +37,7 @@ public:
 	GridMac2f(const Vec2i& size, int ghost, BufferType type, CLQueue& queue);
 	void upload();
 	void download();
+	void swap(GridMac2f& grid);
 	
 	inline float* ptrU() { return &u.buffer[ghost + ghost*layout.x]; }
 	inline float* ptrV() { return &v.buffer[ghost + ghost*layout.x]; }
