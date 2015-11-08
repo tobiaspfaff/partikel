@@ -9,12 +9,6 @@
 
 class GLWindow;
 
-struct LineVertex
-{
-	Vec4 color;
-	Vec2 pos;	
-};
-
 struct DisplayPartInfo
 {
 	DynamicParticles* part;
@@ -36,12 +30,13 @@ protected:
 	GLWindow& window;
 	Vec2 domainMin;
 	Vec2 domainMax;
+	CLQueue& queue;
 	std::vector<DisplayPartInfo> displayPartList;
-	SingleVertexArray<cl_float2> vbPart;
-	SingleVertexArray<LineVertex> vbGridLines;
-	std::unique_ptr<CLVertexBuffer<cl_float2> > clPart;
-	CLKernel fillKernel;
-	std::unique_ptr<ShaderProgram> particleShader, lineShader;
+	std::unique_ptr<SingleVertexArray> vaPart;
+	std::unique_ptr<CLVertexBuffer<cl_float> > clPart;
+	std::unique_ptr<ShaderProgram> particleShader;
+	ShaderArgument<Vec2> uniformScale;
+	ShaderArgument<float> uniformBillboardSize;
 	int curSystem = -1;
 };
 

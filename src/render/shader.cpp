@@ -58,17 +58,22 @@ GeometryShader::GeometryShader(const string& filename)
 	handle = shaderLoad(filename, GL_GEOMETRY_SHADER, "Geometry");
 }
 
-ShaderProgram::ShaderProgram(shared_ptr<VertexShader> vs, 
-							 shared_ptr<FragmentShader> fs,
-							 shared_ptr<GeometryShader> gs) :
-	vs(vs), fs(fs), gs(gs)
+ShaderProgram::ShaderProgram(const string& vertShader, 
+							 const string& geomShader,
+							 const string& fragShader)
 {
 	handle = glCreateProgram();
-	glAttachShader(handle, vs->handle);
-	glAttachShader(handle, fs->handle);
-	if (gs)
+	
+	VertexShader vs(vertShader);
+	glAttachShader(handle, vs.handle);
+
+	FragmentShader fs(fragShader);
+	glAttachShader(handle, fs.handle);
+
+	if (!geomShader.empty())
 	{
-		glAttachShader(handle, gs->handle);	
+		GeometryShader gs(geomShader);
+		glAttachShader(handle, gs.handle);	
 	}
 	glLinkProgram(handle);
 
@@ -93,47 +98,25 @@ void ShaderProgram::use()
 	glUseProgram(handle);
 }
 
-void ShaderProgram::setUniform(int idx, int v)
-{
-	glProgramUniform1i(handle, idx, v);
-}
-
-void ShaderProgram::setUniform(int idx, float v)
-{
-	glProgramUniform1f(handle, idx, v);
-}
-
-void ShaderProgram::setUniform(int idx, const Vec2& v)
-{
-	glProgramUniform2f(handle, idx, v.x, v.y);
-}
-
-void ShaderProgram::setUniform(int idx, const Vec3& v)
-{
-	glProgramUniform3f(handle, idx, v.x, v.y, v.z);
-}
-
-void ShaderProgram::setUniform(int idx, const Vec4& v)
-{
-	glProgramUniform4f(handle, idx, v.x, v.y, v.z, v.w);
-}
-
-void ShaderProgram::setUniform(int idx, const Vec2i& v)
-{
-	glProgramUniform2i(handle, idx, v.x, v.y);
-}
-
-void ShaderProgram::setUniform(int idx, const Vec3i& v)
-{
-	glProgramUniform3i(handle, idx, v.x, v.y, v.z);
-}
-
-void ShaderProgram::setUniform(int idx, const Vec4i& v)
-{
-	glProgramUniform4i(handle, idx, v.x, v.y, v.z, v.w);
-}
-
-int ShaderProgram::uniform(const char* name) 
+int ShaderProgram::uniformIndex(const char* name)
 {
 	return glGetUniformLocation(handle, name);
 }
+
+template<>
+void ShaderArgument<int>::set(const int& v)
+{
+	glProgramUniform1i(program, handle, v);
+};
+
+template<>
+void ShaderArgument<float>::set(const float& v)
+{
+	glProgramUniform1f(program, handle, v);
+};
+
+template<>
+void ShaderArgument<Vec2>::set(const Vec2& v)
+{
+	glProgramUniform2f(program, handle, v.x, v.y);
+};

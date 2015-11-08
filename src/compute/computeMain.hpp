@@ -57,9 +57,11 @@ class CLBuffer
 public:
 	CLBuffer(CLQueue& queue, int size, BufferType type);
 	CLBuffer(CLQueue& queue) : queue(queue) {}
+	virtual ~CLBuffer();
 	void upload();
 	void download();
 	void swap(CLBuffer<T>& other);
+	void setSize(int nsize);
 
 	std::vector<T> buffer;
 	BufferType type = BufferType::None;
@@ -72,10 +74,13 @@ template<class T>
 class CLVertexBuffer : public CLBuffer<T>
 {
 public:
-	CLVertexBuffer(CLQueue& queue, SingleVertexArray<T>& va);
+	CLVertexBuffer(CLQueue& queue, SingleVertexArray& va);
 
 	void acquire();
 	void release();
+	void grow(int nsize);
+
+	SingleVertexArray& vaLink;
 };
 
 // ------------------------------------
@@ -88,10 +93,20 @@ CLBuffer<T>::CLBuffer(CLQueue& queue, int size, BufferType type) :
 {
 	cl_int err;
 	if (type == BufferType::Gpu || type == BufferType::Both)
+	{
 		this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T)*size, nullptr, &err);
+		clTest(err, "create cl buffer");
+	}
 	if (type == BufferType::Host || type == BufferType::Both)
+	{
 		buffer.resize(size);
-	clTest(err, "create cl buffer");
+	}
+}
+
+template<class T>
+CLBuffer<T>::~CLBuffer()
+{
+	clReleaseMemObject(this->handle);
 }
 
 template<class T>
@@ -122,12 +137,29 @@ void CLBuffer<T>::swap(CLBuffer<T>& other)
 }
 
 template<class T>
-CLVertexBuffer<T>::CLVertexBuffer(CLQueue& queue, SingleVertexArray<T>& va) :
-	CLBuffer(queue)
+void CLBuffer<T>::setSize(int nsize)
+{
+	cl_int err;
+	this->size = nsize;
+	if (type == BufferType::Gpu || type == BufferType::Both)
+	{
+		clReleaseMemObject(this->handle);
+		this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T)*size, nullptr, &err);
+		clTest(err, "create cl");
+	}
+	if (type == BufferType::Host || type == BufferType::Both)
+	{
+		buffer.resize(size);
+	}
+}
+
+template<class T>
+CLVertexBuffer<T>::CLVertexBuffer(CLQueue& queue, SingleVertexArray& va) :
+	CLBuffer(queue), vaLink(va)
 {
 	cl_int err;
 	this->type = BufferType::Gpu;
-	this->size = va.buffer.size;
+	this->size = va.buffer.size / sizeof(T);
 	this->handle = clCreateFromGLBuffer(queue.context, CL_MEM_WRITE_ONLY, va.buffer.handle, &err);
 	clTest(err, "create cl/gl buffer");
 }
@@ -148,6 +180,20 @@ template<class T>
 void CLVertexBuffer<T>::release() 
 {
 	clTest(clEnqueueReleaseGLObjects(queue.handle, 1, &this->handle, 0, 0, 0), "release gl");
+}
+
+template<class T>
+void CLVertexBuffer<T>::grow(int nsize)
+{
+	if (nsize <= size)
+		return;
+
+	vaLink.buffer.setSize(nsize * sizeof(T));
+	this->size = nsize;
+	clReleaseMemObject(this->handle);
+	cl_int err;
+	this->handle = clCreateFromGLBuffer(queue.context, CL_MEM_WRITE_ONLY, vaLink.buffer.handle, &err);
+	clTest(err, "create from gl");
 }
 
 #endif

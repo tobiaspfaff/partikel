@@ -31,28 +31,47 @@ public:
 	GeometryShader(const std::string& filename);	
 };
 
+template<class T>
+struct ShaderArgument
+{
+	ShaderArgument() {}
+	ShaderArgument(int program, int index) : program(program), handle(index) {}
+	void set(const T& value);
+
+	int program = -1;
+	int handle = -1;
+};
+
 class ShaderProgram 
 {
 public:
-	ShaderProgram(std::shared_ptr<VertexShader> vs, 
-				  std::shared_ptr<FragmentShader> fs,
-				  std::shared_ptr<GeometryShader> gs = nullptr);
+	ShaderProgram(const std::string& vertShader,
+				  const std::string& geomShader,
+		          const std::string& fragShader);
 	~ShaderProgram();
-	void use();
-	int uniform(const char* name);
-	void setUniform(int idx, int i);
-	void setUniform(int idx, float v);
-	void setUniform(int idx, const Vec2& v);
-	void setUniform(int idx, const Vec3& v);
-	void setUniform(int idx, const Vec4& v);
-	void setUniform(int idx, const Vec2i& v);
-	void setUniform(int idx, const Vec3i& v);
-	void setUniform(int idx, const Vec4i& v);
 
+	template <class T> ShaderArgument<T> arg(const char* name);
+	int uniformIndex(const char* name);
+	void use();
+	
 	unsigned int handle;
-	std::shared_ptr<VertexShader> vs;
-	std::shared_ptr<FragmentShader> fs;
-	std::shared_ptr<GeometryShader> gs;
+	VertexShader* vs;
+	FragmentShader* fs;
+	GeometryShader* gs = nullptr;
 };
+
+
+
+// ------------------------------------
+// IMPLEMENTATION
+// ------------------------------------
+
+template<class T>
+ShaderArgument<T> ShaderProgram::arg(const char* name)
+{
+	return ShaderArgument<T> (handle, uniformIndex(name));
+}
+
+
 
 #endif

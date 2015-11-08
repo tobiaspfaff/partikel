@@ -8,11 +8,11 @@
 
 class ParticleBase {
 public:
-	ParticleBase(int reserve, BufferType type) {}
+	ParticleBase(int reserve, BufferType type) : reserve(reserve) {}
 	virtual ~ParticleBase() {}
 
 	int reserve;
-	int size;
+	int size = 0;
 };
 
 class DynamicParticles : public ParticleBase {
@@ -20,11 +20,15 @@ public:
 	DynamicParticles(int reserve, BufferType type, CLQueue& queue);
 	void upload();
 	void download();
+	void setSize(int nsize);
 	
-	CLBuffer<cl_float> px, py, invmass;
+	CLBuffer<cl_float> px, py;
+	CLBuffer<cl_float> qx, qy; 
+	CLBuffer<cl_float> vx, vy;
+	CLBuffer<cl_float> invmass;
 	CLBuffer<cl_int> phase;
 };
 
-void seedRandom(DynamicParticles& parts, Vec2& domain, float density);
+void seedRandom(DynamicParticles& parts, const Vec2& domain, float density);
 
 #endif

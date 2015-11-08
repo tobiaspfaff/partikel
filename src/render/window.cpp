@@ -2,6 +2,7 @@
 
 #include "render/opengl.hpp"
 #include <iostream>
+#include <sstream>
 #include <GLFW/glfw3.h>
 #include "render/window.hpp"
 #include "tools/log.hpp"
@@ -30,7 +31,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-GLWindow::GLWindow(const string& name, int width, int height) 
+GLWindow::GLWindow(int width, int height) 
 {
 	// Initialize GLFW
 	if (!glfwInit()) 
@@ -48,7 +49,7 @@ GLWindow::GLWindow(const string& name, int width, int height)
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 	// Create the window and context
-	window = glfwCreateWindow(width, height, name.c_str(), NULL, NULL);
+	window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
 	if(!window) 
 	{
 		fatalError("Can't create GLFW window");
@@ -62,17 +63,33 @@ GLWindow::GLWindow(const string& name, int width, int height)
 	// Makes sure all extensions will be exposed in GLEW and initialize GLEW.
 	glewExperimental = GL_TRUE;
 	glewInit();
+
+	glfwSwapInterval(1);
 }
 
 void GLWindow::clearBuffer() 
 {
-	static const GLfloat green[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glClearBufferfv(GL_COLOR, 0, green);
+	int width, height;
+	glfwGetFramebufferSize(window, &width, &height);
+	glViewport(0, 0, width, height);
+
+	//static const GLfloat color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    //glClearBufferfv(GL_COLOR, 0, color);
+	glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void GLWindow::swap() 
 {
-	glfwSwapBuffers(window);    
+	glfwSwapBuffers(window);
+	
+	// Timing
+	if (++curFrame >= framesToAverage)
+	{
+		fps = framesToAverage / glfwGetTime();
+		curFrame = 0;
+		glfwSetTime(0);
+		updateTitle();
+	}
 }
 
 bool GLWindow::poll()
@@ -83,5 +100,14 @@ bool GLWindow::poll()
 
 void GLWindow::setTitle(const string& text)
 {
-	glfwSetWindowTitle(window, text.c_str());
+	title = text;
+	updateTitle();
+}
+
+void GLWindow::updateTitle()
+{
+	stringstream str;
+	str.precision(1);
+	str << title << " [" << fixed << fps << " fps]";
+	glfwSetWindowTitle(window, str.str().c_str());
 }

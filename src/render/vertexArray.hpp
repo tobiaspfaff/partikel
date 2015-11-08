@@ -7,34 +7,27 @@
 #include <string>
 #include <memory>
 
-class VertexBufferBase
+class VertexBuffer
 {
 public:
-	VertexBufferBase();
-	~VertexBufferBase();
+	VertexBuffer();
+	virtual ~VertexBuffer();
 	void bind();
+	void setData(void* data, size_t size);
+	inline void setSize(size_t nsize) { setData(nullptr, nsize); };
 
 	unsigned int handle;	
+	size_t size = 0;
 
 protected:
-	static VertexBufferBase* bound;	
-};
-
-template<class T>
-class VertexBuffer : public VertexBufferBase
-{
-public:
-	VertexBuffer() : VertexBufferBase() {}
-	void setData(const T* data, size_t num);
-
-	int size {0};
+	static VertexBuffer* bound;	
 };
 
 class VertexArray
 {
 public:
 	VertexArray();
-	~VertexArray();
+	virtual ~VertexArray();
 	void bind();
 
 	unsigned int handle;
@@ -43,37 +36,12 @@ protected:
 	static VertexArray* bound;	
 };
 
-template<class T>
 class SingleVertexArray : public VertexArray
 {
 public:
-	void defineAttrib(int index, GLenum type, int elements, size_t offset);
+	void defineAttrib(int index, GLenum type, int elements, int stride, size_t offset);
 
-	VertexBuffer<T> buffer;	
+	VertexBuffer buffer;	
 };
-
-
-// ------------------------------------
-// IMPLEMENTATION
-// ------------------------------------
-
-template<class T>
-void VertexBuffer<T>::setData(const T* data, size_t num) 
-{
-	size = num;
-	bind();
-	glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), nullptr, GL_STREAM_DRAW); // orphaning
-	if (data)
-		glBufferData(GL_ARRAY_BUFFER, num * sizeof(T), data, GL_STREAM_DRAW);
-}
-
-template<class T>
-void SingleVertexArray<T>::defineAttrib(int index, GLenum type, int elements, size_t offset) 
-{
-	bind();
-	buffer.bind();
-	glVertexAttribPointer(index, elements, type, GL_FALSE, sizeof(T), (void*) offset);
-	glEnableVertexAttribArray(index);
-}
 
 #endif
