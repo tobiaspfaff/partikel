@@ -73,9 +73,9 @@ void GLWindow::clearBuffer()
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
-	//static const GLfloat color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    //glClearBufferfv(GL_COLOR, 0, color);
-	glClear(GL_COLOR_BUFFER_BIT);
+	static const GLfloat color[] = { 0.0f, 1.0f, 0.0f, 0.0f };
+    glClearBufferfv(GL_COLOR, 0, color);
+	//glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void GLWindow::swap() 

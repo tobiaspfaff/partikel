@@ -70,9 +70,9 @@ void seedRandom(DynamicParticles& parts, const Vec2& domain, float density)
 
 	for (int i = 0; i < N; i++)
 	{
-		//Vec2 pos(uniformX(gen), uniformY(gen));
-		Vec2i p(i / domain.x, i % (int)domain.x);
-		Vec2 pos((float)p.x + 0.5f, (float)p.y + 0.5f);
+		Vec2i p(i % (int)domain.x, (domain.y - 1) - i / (int)domain.x);
+		Vec2 pos(uniformX(gen), uniformY(gen));
+		//Vec2 pos((float)p.x + 0.5f, (float)p.y + 0.5f);
 		parts.px.buffer[i] = pos.x;
 		parts.py.buffer[i] = pos.y;
 		parts.qx.buffer[i] = pos.x;

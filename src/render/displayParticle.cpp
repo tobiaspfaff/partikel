@@ -56,7 +56,7 @@ void DisplayParticle::render()
 		vaPart->defineAttrib(0, GL_FLOAT, 1, 0, 0);
 		vaPart->defineAttrib(1, GL_FLOAT, 1, 0, sizeof(float) * part->size);
 		particleShader->use();
-		uniformBillboardSize.set(0.2f);
+		uniformBillboardSize.set(0.5f);
 		uniformScale.set(Vec2(2.0f / domainMax.x, 2.0f / domainMax.y));
 		glDrawArrays(GL_POINTS, 0, (GLsizei)part->size);
 	}

@@ -33,7 +33,6 @@ inline bool isPowerOf2(int x)
 	return x != 0 && (x & (x - 1)) == 0;
 }
 
-
 MultigridPoisson::MultigridPoisson(const Vec2i& size, float h0, CLQueue& queue)
 {
 	if (!isPowerOf2(size.x) || !isPowerOf2(size.y))

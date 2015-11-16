@@ -21,6 +21,7 @@ message(STATUS "Options - "
 
 set(SOURCES
     src/main.cpp
+    src/compute/gpuSort.cpp
     src/compute/computeMain.cpp
     src/dependencies/stb_image.cpp
     src/render/colors.cpp
@@ -39,7 +40,8 @@ set(SOURCES
 )
 
 set(HEADERS
-	src/compute/computeMain.hpp
+	src/compute/gpuSort.hpp
+    src/compute/computeMain.hpp
     src/render/colors.hpp
     #src/render/displayGrid.hpp
     src/render/displayParticle.hpp

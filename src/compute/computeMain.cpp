@@ -285,9 +285,8 @@ CLKernel::CLKernel(CLQueue& queue, const string& filename, const string& kernel)
 	clTest(err, "Can't create kernel " + kernel);
 }
 
-void CLKernel::enqueue(size_t problem_size) 
+void CLKernel::enqueue(size_t problem_size, size_t local) 
 {
-	size_t local = 1;
 	cl_int err = clEnqueueNDRangeKernel(queue.handle, handle, 1, nullptr, &problem_size, 
 										&local, 0, nullptr, nullptr);
 	clTest(err, "Can't enqueue kernel");
