@@ -23,7 +23,6 @@ public:
 	void setSize(int nsize);
 	
 	CLBuffer<cl_float> px, py;
-	CLBuffer<cl_float> qx, qy; 
 	CLBuffer<cl_float> vx, vy;
 	CLBuffer<cl_float> invmass;
 	CLBuffer<cl_int> phase;
