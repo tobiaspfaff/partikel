@@ -2,42 +2,49 @@
 
 __kernel void predictPosition(
 	__global float* px, __global float* py, 
-	__global float* qx, __global float* qy,
+	__global float* qx, __global float* qy, // in: velocity, out: xstar
 	float dt, uint num)
 {
 	size_t tid = get_global_id(0);
 	if (tid >= num)
 		return;
 	
-	// apply gravity (qx doubles as velocity)
-	qy[tid] += dt * -9.81;
+	float vx = qx[tid], vy = qy[tid];
+	float x = px[tid], y = py[tid];
+
+	// apply gravity
+	vy += dt * -9.81;
 
 	// predict x star
-	qx[tid] = px[tid] + dt * qx[tid];
-	qy[tid] = py[tid] + dt * qy[tid];
-	
+	qx[tid] = x + dt * vx;
+	qy[tid] = y + dt * vy;
 }
 
 __kernel void finalAdvect(
-	__global float* px, __global float* py,
-	__global float* qx, __global float* qy,
+	__global float* px, __global float* py, // in: pos
+	__global float* qx, __global float* qy, // in: xstar
+	__global float* npx, __global float* npy, // out: pos
+	__global float* nvx, __global float* nvy, // out: velocity
 	float inv_dt, uint num)
 {
 	size_t tid = get_global_id(0);
 	if (tid >= num)
 		return;
 
+	float xs = qx[tid], ys = qy[tid];
+	float x = px[tid], y = py[tid];
+	
 	// update velocity
-	float vx = inv_dt * (qx[tid] - px[tid]);
-	float vy = inv_dt * (qy[tid] - py[tid]);
+	float vx = inv_dt * (xs - x);
+	float vy = inv_dt * (ys - y);
 	//vx *= 0.9f;
 	//vy *= 0.9f;
 	
-	// set position and velocity
-	px[tid] = qx[tid];
-	py[tid] = qy[tid]; 
-	qx[tid] = vx;
-	qy[tid] = vy;	
+	// set new position and velocity
+	npx[tid] = xs;
+	npy[tid] = ys;
+	nvx[tid] = vx;
+	nvy[tid] = vy;
 }
 
 __kernel void prepareList(
@@ -112,44 +119,3 @@ __kernel void calcCellBoundsAndReorder(
 		ph2[tid] = ph[sortedIndex];
 	}
 }
-
-/*
-
-
-// additional : sort pos, vel
-const float R = 0.5f;
-for (int i = 0; i <part->size; i++) {
-	Vec2 p(px[i], py[i]);
-	Vec2i cell(px[i], py[i]);
-	for (int dj = -1; dj <= 1; dj++) {
-		for (int di = -1; di <= 1; di++)
-		{
-			Vec2i pj(cell.x + di, cell.y + dj);
-			if (pj.x < 0 || pj.y < 0 || pj.x >= grid.x || pj.y >= grid.y)
-				continue;
-			int hash = pj.x + pj.y * grid.x;
-			int start = acellStart[hash], end = acellEnd[hash];
-			if (start < 0 || end < 0)
-				continue;
-			for (int s = start; s < end; s++) {
-				int p2 = pairs[s].particle;
-				if (p2 == i)
-					continue;
-
-				const Vec2 x1(px[i], py[i]);
-				const Vec2 x2(px[p2], py[p2]);
-				float C = norm(x1 - x2) - 2 * R;
-				if (C > 0)
-					continue;
-				float iw = 1.0f / (part->invmass.buffer[i] + part->invmass.buffer[p2]);
-				Vec2 dx1 = (-iw * part->invmass.buffer[i] * C) * normalize(x1 - x2);
-				Vec2 dx2 = (-iw * part->invmass.buffer[p2] * C) * -normalize(x1 - x2);
-				px[i] += dx1.x;
-				py[i] += dx1.y;
-				px[p2] += dx2.x;
-				py[p2] += dx2.y;
-			}
-		}
-	}
-}
-*/

@@ -59,201 +59,101 @@ int main()
 	auto& queue = gpuQueue;
 
 	// Particles
-	Vec2 domain(32, 32);
-	auto part = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
-	auto partAlt = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
-	seedRandom(*part, domain, 1.0f);
-	seedRandom(*partAlt, domain, 1.0f);
+	Vec2 domain(256, 256);
+	auto part1 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
+	auto part2 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
+	seedRandom(*part1, domain, 1.0f);
+	seedRandom(*part2, domain, 1.0f);
+	int parts = part1->size;
 
 	// Display handler
 	DisplayParticle display(queue, Vec2(0), domain, *window);
-	display.attach(part.get(), "P0");
+	display.attach(part1.get(), "P0");
 
-	const float dt = 0.01f;
+	float dt = 0.01f;
 	Vec2i grid((int)domain.x, (int)domain.y);
 	const int wgSize = 32;
-	
-	cl_uint2 gridSize = {grid.x, grid.y};
-	CLBuffer<cl_uint> hash(queue, part->size, BufferType::Both);
-	CLBuffer<cl_uint> particle(queue, part->size, BufferType::Both);
-	CLBuffer<cl_uint> hash2(queue, part->size, BufferType::Both);
-	CLBuffer<cl_uint> particle2(queue, part->size, BufferType::Both);
-	CLBuffer<cl_uint> cellStart(queue, part->size, BufferType::Both);
-	CLBuffer<cl_uint> cellEnd(queue, part->size, BufferType::Both);
+	const float R = 0.5f;
+
+	cl_uint2 gridSize = { grid.x, grid.y };
+	cl_float2 domainSize = { domain.x, domain.y };
+
+	// Temporary buffers for sorting
+	CLBuffer<cl_uint> hash(queue, parts, BufferType::Both);
+	CLBuffer<cl_uint> hashSorted(queue, parts, BufferType::Both);
+	CLBuffer<cl_uint> particleIndex(queue, parts, BufferType::Both);
+	CLBuffer<cl_uint> particleIndexSorted(queue, parts, BufferType::Both);
 	
 	// Kernels
 	CLKernel clPredict(queue, "particle.cl", "predictPosition");
 	CLKernel clAdvect(queue, "particle.cl", "finalAdvect");	
 	CLKernel clPrepareList(queue, "particle.cl", "prepareList");		
-	CLKernel clCalcCellBounds(queue, "particle.cl", "calcCellBoundsAndReorder");	
+	CLKernel clCalcCellBounds(queue, "particle.cl", "calcCellBoundsAndReorder");
+	CLKernel clCollide(queue, "collision.cl", "collide");
+	CLKernel clWallCollide(queue, "collision.cl", "wallCollideAndApply");
 	BitonicSort sorter(queue);
 
 	auto tex = make_unique<Texture>("circle.png");
 	tex->bind();
 
-	vector<float> tx(part->size);
-	vector<float> ty(part->size);
-	vector<int> tidx(part->size);
-
 	while (window->poll())
-	{
+	{		
 		glFinish();
-		clPredict.call(part->size, 1, part->px, part->py, part->qx, part->qy, (float)dt, part->size);			
+		auto cur = part1.get();
+		auto alt = part2.get();
+
+		// Predict particle position, apply gravity
+		clPredict.call(parts, 1, cur->px, cur->py, cur->qx, cur->qy, dt, parts);			
 		clEnqueueBarrier(queue.handle);
-		clPrepareList.call(part->size, 1, part->qx, part->qy, hash, particle, gridSize, part->size);
+
+		// Sort particles by cell hash
+		clPrepareList.call(parts, 1, cur->qx, cur->qy, hash, particleIndex, gridSize, parts);
 		clEnqueueBarrier(queue.handle);
-		sorter.sort(hash, hash2, particle, particle2);
+		sorter.sort(hash, hashSorted, particleIndex, particleIndexSorted);
 		clEnqueueBarrier(queue.handle);
+
+		// Re-order particles and collect neighborhood information
+		auto& cellStart = particleIndex;
+		auto& cellEnd = hash;
 		cellStart.fill(0xFFFFFFFFU);
 		LocalBlock local((wgSize + 1) * sizeof(cl_uint));
-		clCalcCellBounds.call(part->size, wgSize, hash2, particle2, cellStart, cellEnd, local, part->size,
-			part->px, part->py, part->qx, part->qy, part->invmass, part->phase,
-			partAlt->px, partAlt->py, partAlt->qx, partAlt->qy, partAlt->invmass, partAlt->phase);
+		clCalcCellBounds.call(parts, wgSize, hashSorted, particleIndexSorted, cellStart, cellEnd, local, parts,
+			cur->px, cur->py, cur->qx, cur->qy, cur->invmass, cur->phase,
+			alt->px, alt->py, alt->qx, alt->qy, alt->invmass, alt->phase);
 		clEnqueueBarrier(queue.handle);
-		clFinish(queue.handle);
+		swap(cur, alt);
 
-		part->download();
-		partAlt->download();
-		particle2.download();
-		hash2.download();
-		particle.download();
-		hash.download();
-		cellStart.download();
-		cellEnd.download();
-		vector<float>& qx = partAlt->qx.buffer;
-		vector<float>& qy = partAlt->qy.buffer;
-		vector<float>& weight = partAlt->invmass.buffer;
-
-		/*vector<float>& px = part->qx.buffer;
-		vector<float>& py = part->qy.buffer;
-		int N = grid.x * grid.y;
-
-		vector<NPair> pairs(part->size);
-		vector<int> acellStart(N, -1);
-		vector<int> acellEnd(N, -1);
-		for (int i = 0; i < pairs.size(); i++)
+		// iterate on constraints
+		for (int iter = 0; iter < 5; iter++)
 		{
-			//Vec2 p(px[i], py[i]);
-			//Vec2i cell(px[i], py[i]);
-			//pairs[i].hash = cell.x + grid.x * cell.y;
-			pairs[i].particle = particle2.buffer[i];
-			pairs[i].hash = hash2.buffer[i];
+			auto& deltaX = alt->qx;
+			auto& deltaY = alt->qy;
+			auto& counter = hashSorted;
+			counter.fill(0);
+			deltaX.fill(0);
+			deltaY.fill(0);
+			clEnqueueBarrier(queue.handle);
+
+			// particle - particle collisions
+			const float SOR = 1.8f;
+			clCollide.call(parts, 1, cur->qx, cur->qy, deltaX, deltaY, cellStart, cellEnd,
+				cur->invmass, counter, R, gridSize, parts);
+			clEnqueueBarrier(queue.handle);
+
+			// add wall collision constraints, apply SOR Jacobi
+			clWallCollide.call(parts, 1, cur->qx, cur->qy, 
+				deltaX, deltaY, counter, R, domainSize, SOR, parts);			
+			clEnqueueBarrier(queue.handle);
 		}
-		//		sort(pairs.begin(), pairs.end());
 		
-		for (int i = 0; i < pairs.size(); i++)
-		{
-			int part = pairs[i].particle;
-			int hash = pairs[i].hash;
-			if (i == 0 || hash != pairs[i - 1].hash)
-			{
-				acellStart[hash] = i;
-				if (i > 0)
-					acellEnd[pairs[i - 1].hash] = i;
-			}
-			if (i == pairs.size() - 1)
-				acellEnd[hash] = i + 1;
-		}
-		*/
-		// additional : sort pos, vel
-		const float R = 0.5f;
-		
-		for (int iter = 0; iter < 10; iter++)
-		{
-			/*vector<float> de(100 * 100, 0);
-			vector<int> cnt(100 * 100, 0);
-
-			for (int i = 0; i < 100*99; i++) {
-				float& x1 = part->qy.buffer[i];
-				float& x2 = part->qy.buffer[i+100];
-				float d = 1.2f;
-				float delta = 0.5 * ((x1 - x2) - d);
-				if (delta < 0) delta = 0;
-				if (i >= 100) {
-					de[i] -= delta;
-					cnt[i]++;
-				}
-				de[i+100] += delta;
-				cnt[i+100]++;
-			}
-			for (int i = 0; i < 100 * 100; i++) {
-				if (cnt[i] > 0) {
-					part->qy.buffer[i] += 1.5f * de[i] / cnt[i];
-				}
-			}*/
-			
-			for (int i = 0; i < part->size; i++) {
-				tx[i] = ty[i] = 0;
-				tidx[i] = 0;
-			}
-			
-			for (int i = 0; i < part->size; i++) {
-				Vec2 p(qx[i], qy[i]);
-				Vec2i cell((int)p.x, (int)p.y);
-				for (int dj = -1; dj <= 1; dj++) {
-					for (int di = -1; di <= 1; di++)
-					{
-						Vec2i pj(cell.x + di, cell.y + dj);
-						if (pj.x < 0 || pj.y < 0 || pj.x >= grid.x || pj.y >= grid.y)
-							continue;
-						int hash = pj.x + pj.y * grid.x;
-						int start = cellStart.buffer[hash], end = cellEnd.buffer[hash];
-						if (start < 0 || end < 0)
-							continue;
-						//cout << i << ": " << hash << " -> " << start << "-" << end << endl;
-
-						for (int s = start; s < end; s++) {
-							int i2 = s;// particle2.buffer[s];
-							if (i2 == i)
-								continue;
-
-							Vec2 x1(qx[i], qy[i]);
-							Vec2 x2(qx[i2], qy[i2]);
-							float C = norm(x1 - x2) - 2 * R;
-
-							if (C > 0)
-								continue;
-							float iw = 1.0f / (weight[i] + weight[i2]);
-							Vec2 dx1 = (-iw * weight[i] * C) * normalize(x1 - x2);
-							Vec2 dx2 = (-iw * weight[i2] * C) * -normalize(x1 - x2);
-							tx[i] += dx1.x;
-							ty[i] += dx1.y;
-							tidx[i]++;
-							tx[i2] += dx2.x;
-							ty[i2] += dx2.y;
-							tidx[i2]++;
-						}
-					}
-				}
-			}
-
-			for (int i = 0; i < part->size; i++) {
-				if (tidx[i] > 0) {
-					qx[i] += tx[i] * 1.8f / tidx[i];
-					qy[i] += ty[i] * 1.8f / tidx[i];
-				}
-			}
-			
-			for (int i = 0; i < domain.x * domain.y; i++) {
-				Vec2 p(qx[i], qy[i]);
-				p.x = max(min(p.x, domain.x-0.5f), 0.5f);
-				p.y = max(min(p.y, domain.y-0.5f), 0.5f);
-				qx[i] = p.x;
-				qy[i] = p.y;
-			}
-		}
-		part->px.buffer = partAlt->px.buffer;
-		part->py.buffer = partAlt->py.buffer;
-		part->qx.buffer = partAlt->qx.buffer;
-		part->qy.buffer = partAlt->qy.buffer;
-		part->px.upload();
-		part->py.upload();
-		part->qx.upload();
-		part->qy.upload();
-
+		// apply position delta
+		clAdvect.call(parts, 1, cur->px, cur->py, cur->qx, cur->qy, 
+			alt->px, alt->py, alt->qx, alt->qy, 1.0f/dt, parts);
 		clEnqueueBarrier(queue.handle);
-		clAdvect.call(part->size, 1, part->px, part->py, part->qx, part->qy, 1.0f/dt, part->size);
-		clEnqueueBarrier(queue.handle);
+		swap(cur, alt);
+
+		// copy particles to display buffer
+		assert(cur == part1.get());
 		display.compute();
 		clFinish(queue.handle);
 

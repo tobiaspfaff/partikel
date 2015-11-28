@@ -54,6 +54,7 @@ void seedRandom(DynamicParticles& parts, const Vec2& domain, float density)
 {
 	random_device rd;
 	mt19937 gen(rd());
+	gen.seed(12);
 	uniform_real_distribution<float> uniformX(0, domain.x);
 	uniform_real_distribution<float> uniformY(0, domain.y);
 
