@@ -8,8 +8,8 @@ DynamicParticles::DynamicParticles(int reserve, BufferType type, CLQueue& queue)
 	ParticleBase(reserve, type),
 	px(queue, reserve, type),
 	py(queue, reserve, type),
-	vx(queue, reserve, type),
-	vy(queue, reserve, type),
+	qx(queue, reserve, type),
+	qy(queue, reserve, type),
 	invmass(queue, reserve, type),
 	phase(queue, reserve, type)
 {
@@ -19,8 +19,8 @@ void DynamicParticles::upload()
 {
 	px.upload();
 	py.upload();
-	vx.upload();
-	vy.upload();
+	qx.upload();
+	qy.upload();
 	invmass.upload();
 	phase.upload();
 }
@@ -29,8 +29,8 @@ void DynamicParticles::download()
 {
 	px.download();
 	py.download();
-	vx.download();
-	vy.download();
+	qx.download();
+	qy.download();
 	invmass.download();
 	phase.download();
 }
@@ -42,8 +42,8 @@ void DynamicParticles::setSize(int nsize)
 	{
 		px.setSize(nsize);
 		py.setSize(nsize);
-		vx.setSize(nsize);
-		vy.setSize(nsize);
+		qx.setSize(nsize);
+		qy.setSize(nsize);
 		invmass.setSize(nsize);
 		phase.setSize(nsize);
 		reserve = nsize;
@@ -62,13 +62,13 @@ void seedRandom(DynamicParticles& parts, const Vec2& domain, float density)
 
 	for (int i = 0; i < N; i++)
 	{
-		Vec2i p(i % (int)domain.x, (domain.y - 1) - i / (int)domain.x);
+		Vec2i p(i % (int)domain.x, (int)(domain.y - 1) - i / (int)domain.x);
 		Vec2 pos(uniformX(gen), uniformY(gen));
 		//Vec2 pos((float)p.x + 0.5f, (float)p.y + 0.5f);
 		parts.px.buffer[i] = pos.x;
 		parts.py.buffer[i] = pos.y;
-		parts.vx.buffer[i] = 0;
-		parts.vy.buffer[i] = 0;
+		parts.qx.buffer[i] = 0;
+		parts.qy.buffer[i] = 0;
 		parts.invmass.buffer[i] = 1.0f;
 		parts.phase.buffer[i] = 0;
 	}
