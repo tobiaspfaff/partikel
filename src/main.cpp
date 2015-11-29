@@ -35,16 +35,6 @@ bool keyHandler(int key, int mods)
 	}
 }
 
-struct NPair
-{
-	int hash;
-	int particle;
-
-	bool operator<(const NPair& a) 
-	{
-		return hash < a.hash;
-	}
-};
 
 int main() 
 {	
@@ -59,29 +49,27 @@ int main()
 	auto& queue = gpuQueue;
 
 	// Particles
-	Vec2 domain(256, 256);
+	const float R = 0.1f;
+	Domain domain = { { 0, 0 }, {64, 64}, 2*R };
 	auto part1 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
 	auto part2 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
-	seedRandom(*part1, domain, 1.0f);
-	seedRandom(*part2, domain, 1.0f);
+	seedRandom(*part1, domain, 0.5f, 0.01f);
+	seedRandom(*part2, domain, 0.5f, 0.01f);
 	int parts = part1->size;
 
 	// Display handler
-	DisplayParticle display(queue, Vec2(0), domain, *window);
+	DisplayParticle display(queue, domain, *window);
 	display.attach(part1.get(), "P0");
+	display.setRadius(R);
 
-	float dt = 0.01f;
-	Vec2i grid((int)domain.x, (int)domain.y);
-	const int wgSize = 32;
-	const float R = 0.5f;
-
-	cl_uint2 gridSize = { grid.x, grid.y };
-	cl_float2 domainSize = { domain.x, domain.y };
-
+	float dt = 1.0f/60.0f;
+	const int wgSize = 64;
+	
 	// Temporary buffers for sorting
-	CLBuffer<cl_uint> hash(queue, parts, BufferType::Both);
-	CLBuffer<cl_uint> hashSorted(queue, parts, BufferType::Both);
-	CLBuffer<cl_uint> particleIndex(queue, parts, BufferType::Both);
+	int gridElems = domain.size.x * domain.size.y;
+	CLBuffer<cl_uint> hash(queue, max(gridElems,parts), BufferType::Both); // bigger, as it's reused as a hashgrid
+	CLBuffer<cl_uint> particleIndex(queue, max(gridElems,parts), BufferType::Both);
+	CLBuffer<cl_uint> hashSorted(queue, parts, BufferType::Both); // not re-used, only partsize
 	CLBuffer<cl_uint> particleIndexSorted(queue, parts, BufferType::Both);
 	
 	// Kernels
@@ -96,67 +84,74 @@ int main()
 	auto tex = make_unique<Texture>("circle.png");
 	tex->bind();
 
+	int numIter = 10;
 	while (window->poll())
 	{		
+ 		if (numIter-- <= 0 && 0)
+			break;
 		glFinish();
 		auto cur = part1.get();
 		auto alt = part2.get();
+		const int substeps = 5;
+		float localDt = dt / substeps;
 
-		// Predict particle position, apply gravity
-		clPredict.call(parts, 1, cur->px, cur->py, cur->qx, cur->qy, dt, parts);			
-		clEnqueueBarrier(queue.handle);
-
-		// Sort particles by cell hash
-		clPrepareList.call(parts, 1, cur->qx, cur->qy, hash, particleIndex, gridSize, parts);
-		clEnqueueBarrier(queue.handle);
-		sorter.sort(hash, hashSorted, particleIndex, particleIndexSorted);
-		clEnqueueBarrier(queue.handle);
-
-		// Re-order particles and collect neighborhood information
-		auto& cellStart = particleIndex;
-		auto& cellEnd = hash;
-		cellStart.fill(0xFFFFFFFFU);
-		LocalBlock local((wgSize + 1) * sizeof(cl_uint));
-		clCalcCellBounds.call(parts, wgSize, hashSorted, particleIndexSorted, cellStart, cellEnd, local, parts,
-			cur->px, cur->py, cur->qx, cur->qy, cur->invmass, cur->phase,
-			alt->px, alt->py, alt->qx, alt->qy, alt->invmass, alt->phase);
-		clEnqueueBarrier(queue.handle);
-		swap(cur, alt);
-
-		// iterate on constraints
-		for (int iter = 0; iter < 5; iter++)
-		{
-			auto& deltaX = alt->qx;
-			auto& deltaY = alt->qy;
-			auto& counter = hashSorted;
-			counter.fill(0);
-			deltaX.fill(0);
-			deltaY.fill(0);
+		for (int substep = 0; substep < substeps; substep++) {
+			// Predict particle position, apply gravity
+			clPredict.call(parts, wgSize, cur->px, cur->py, cur->qx, cur->qy, localDt, parts);
 			clEnqueueBarrier(queue.handle);
 
-			// particle - particle collisions
-			const float SOR = 1.8f;
-			clCollide.call(parts, 1, cur->qx, cur->qy, deltaX, deltaY, cellStart, cellEnd,
-				cur->invmass, counter, R, gridSize, parts);
+			// Sort particles by cell hash
+			clPrepareList.call(parts, wgSize, cur->qx, cur->qy, hash, particleIndex, domain, parts);
+			clEnqueueBarrier(queue.handle);
+			sorter.sort(hash, hashSorted, particleIndex, particleIndexSorted, parts);
 			clEnqueueBarrier(queue.handle);
 
-			// add wall collision constraints, apply SOR Jacobi
-			clWallCollide.call(parts, 1, cur->qx, cur->qy, 
-				deltaX, deltaY, counter, R, domainSize, SOR, parts);			
+			// Re-order particles and collect neighborhood information
+			auto& cellStart = particleIndex;
+			auto& cellEnd = hash;
+			cellStart.fill(0xFFFFFFFFU);
+			LocalBlock local((wgSize + 1) * sizeof(cl_uint));
+			clCalcCellBounds.call(parts, wgSize, hashSorted, particleIndexSorted, cellStart, cellEnd, local, parts,
+				cur->px, cur->py, cur->qx, cur->qy, cur->invmass, cur->phase,
+				alt->px, alt->py, alt->qx, alt->qy, alt->invmass, alt->phase);
 			clEnqueueBarrier(queue.handle);
+			swap(cur, alt);
+
+			// iterate on constraints
+			for (int iter = 0; iter < 5; iter++)
+			{
+				auto& deltaX = alt->qx;
+				auto& deltaY = alt->qy;
+				auto& counter = hashSorted;
+				counter.fill(0);
+				deltaX.fill(0);
+				deltaY.fill(0);
+				clEnqueueBarrier(queue.handle);
+
+				// particle - particle collisions
+				const float SOR = 1.8f;
+				clCollide.call(parts, wgSize, cur->qx, cur->qy, deltaX, deltaY, cellStart, cellEnd,
+					cur->invmass, counter, R, domain, parts);
+				clEnqueueBarrier(queue.handle);
+
+				// add wall collision constraints, apply SOR Jacobi
+				clWallCollide.call(parts, wgSize, cur->qx, cur->qy,
+					deltaX, deltaY, counter, R, domain, SOR, parts);
+				clEnqueueBarrier(queue.handle);
+			}
+
+			// apply position delta
+			clAdvect.call(parts, wgSize, cur->px, cur->py, cur->qx, cur->qy,
+				alt->px, alt->py, alt->qx, alt->qy, 1.0f / localDt, parts);
+			clEnqueueBarrier(queue.handle);
+			swap(cur, alt);			
 		}
-		
-		// apply position delta
-		clAdvect.call(parts, 1, cur->px, cur->py, cur->qx, cur->qy, 
-			alt->px, alt->py, alt->qx, alt->qy, 1.0f/dt, parts);
-		clEnqueueBarrier(queue.handle);
-		swap(cur, alt);
-
 		// copy particles to display buffer
 		assert(cur == part1.get());
 		display.compute();
 		clFinish(queue.handle);
 
+		part1->download();
 		window->clearBuffer();
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

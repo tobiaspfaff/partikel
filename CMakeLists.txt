@@ -59,7 +59,7 @@ set(HEADERS
 )
 
 file(GLOB SHADER "shader/*")
-file(GLOB KERNEL "src/opencl/*.cl")
+file(GLOB KERNEL "src/opencl/*.cl" "src/opencl/*.h")
 
 set_source_files_properties(${SHADER} PROPERTIES HEADER_FILE_ONLY TRUE)
 set_source_files_properties(${KERNEL} PROPERTIES HEADER_FILE_ONLY TRUE)

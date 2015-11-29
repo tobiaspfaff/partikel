@@ -50,27 +50,27 @@ void DynamicParticles::setSize(int nsize)
 	}
 }
 
-void seedRandom(DynamicParticles& parts, const Vec2& domain, float density)
+void seedRandom(DynamicParticles& parts, const Domain& domain, float density, float mass)
 {
 	random_device rd;
 	mt19937 gen(rd());
 	gen.seed(12);
-	uniform_real_distribution<float> uniformX(0, domain.x);
-	uniform_real_distribution<float> uniformY(0, domain.y);
+	uniform_real_distribution<float> uniformX(domain.offset.x, domain.offset.x + domain.dx * domain.size.x);
+	uniform_real_distribution<float> uniformY(domain.offset.y, domain.offset.y + domain.dx * domain.size.y);
 
-	int N = (int)(domain.x * domain.y * density);
+	int N = (int)(domain.size.x * domain.size.y * density);
 	parts.setSize(N);
 
 	for (int i = 0; i < N; i++)
 	{
-		Vec2i p(i % (int)domain.x, (int)(domain.y - 1) - i / (int)domain.x);
+		//Vec2i p(i % (int)domain.x, (int)(domain.y - 1) - i / (int)domain.x);
 		Vec2 pos(uniformX(gen), uniformY(gen));
 		//Vec2 pos((float)p.x + 0.5f, (float)p.y + 0.5f);
 		parts.px.buffer[i] = pos.x;
 		parts.py.buffer[i] = pos.y;
 		parts.qx.buffer[i] = 0;
 		parts.qy.buffer[i] = 0;
-		parts.invmass.buffer[i] = 1.0f;
+		parts.invmass.buffer[i] = 1.0f/mass;
 		parts.phase.buffer[i] = 0;
 	}
 	parts.upload();

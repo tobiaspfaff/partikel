@@ -6,6 +6,13 @@
 #include "compute/computeMain.hpp"
 #include "tools/vectors.hpp"
 
+struct Domain {
+	cl_float2 offset;
+	cl_uint2 size;
+	cl_float dx;
+	cl_float pad;
+};
+
 class ParticleBase {
 public:
 	ParticleBase(int reserve, BufferType type) : reserve(reserve) {}
@@ -28,6 +35,6 @@ public:
 	CLBuffer<cl_int> phase;
 };
 
-void seedRandom(DynamicParticles& parts, const Vec2& domain, float density);
+void seedRandom(DynamicParticles& parts, const Domain& domain, float density, float mass);
 
 #endif

@@ -62,7 +62,7 @@ __kernel void bitonicSortLocal(
     l_val[get_local_id(0) +                      0] = d_SrcVal[                     0];
     l_key[get_local_id(0) + (LOCAL_SIZE_LIMIT / 2)] = d_SrcKey[(LOCAL_SIZE_LIMIT / 2)];
     l_val[get_local_id(0) + (LOCAL_SIZE_LIMIT / 2)] = d_SrcVal[(LOCAL_SIZE_LIMIT / 2)];
-	printf("tid %d set %d = %d\n", get_local_id(0), get_local_id(0) + (LOCAL_SIZE_LIMIT / 2), l_val[get_local_id(0) + (LOCAL_SIZE_LIMIT / 2)]);
+	//printf("tid %d set %d = %d\n", get_local_id(0), get_local_id(0) + (LOCAL_SIZE_LIMIT / 2), l_val[get_local_id(0) + (LOCAL_SIZE_LIMIT / 2)]);
 
 
 	for(uint size = 2; size < arrayLength; size <<= 1){
@@ -72,13 +72,13 @@ __kernel void bitonicSortLocal(
             barrier(CLK_LOCAL_MEM_FENCE);
             uint pos = 2 * get_local_id(0) - (get_local_id(0) & (stride - 1));
 			
-			printf("pid %d i0 %d i1 %d v0 %d v1 %d\n", get_local_id(0), pos, pos + stride, l_val[pos], l_val[pos + stride]);
+			//printf("pid %d i0 %d i1 %d v0 %d v1 %d\n", get_local_id(0), pos, pos + stride, l_val[pos], l_val[pos + stride]);
 			ComparatorLocal(
                 &l_key[pos +      0], &l_val[pos +      0],
                 &l_key[pos + stride], &l_val[pos + stride],
                 ddd
             );
-			printf("lid %d i0 %d i1 %d v0 %d v1 %d\n", get_local_id(0), pos, pos+stride, l_val[pos], l_val[pos + stride]);
+			//printf("lid %d i0 %d i1 %d v0 %d v1 %d\n", get_local_id(0), pos, pos+stride, l_val[pos], l_val[pos + stride]);
         }
     }
 

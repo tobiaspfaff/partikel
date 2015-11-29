@@ -11,7 +11,7 @@ public:
 	BitonicSort(CLQueue& queue);
 
 	void sort(const CLBuffer<cl_uint>& keySrc, CLBuffer<cl_uint>& keyDest,
-			  const CLBuffer<cl_uint>& dataSrc, CLBuffer<cl_uint>& dataDest);
+			  const CLBuffer<cl_uint>& dataSrc, CLBuffer<cl_uint>& dataDest, int N);
 
 protected:
 	CLQueue& queue;

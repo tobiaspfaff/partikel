@@ -253,6 +253,7 @@ CLProgram& CLProgram::get(CLQueue& queue, const std::string& filename)
 	CLProgram& prog = instances[filename];
 
 	string pathName = "src/opencl/" + filename;
+	string includes = "-I src/opencl";
 	fstream file(pathName.c_str());
 	if (!file.is_open())
 		fatalError("Can't load OpenCL kernel " + filename);
@@ -264,7 +265,7 @@ CLProgram& CLProgram::get(CLQueue& queue, const std::string& filename)
 	const char* buf = buffer.c_str();
 	prog.handle = clCreateProgramWithSource(queue.context, 1, &buf, &size, &err);
 	clTest(err, "Failed to create source of " + filename);
-	if(clBuildProgram(prog.handle, 0, nullptr, nullptr, nullptr, nullptr) != CL_SUCCESS)
+	if(clBuildProgram(prog.handle, 0, nullptr, includes.c_str(), nullptr, nullptr) != CL_SUCCESS)
 	{
 		// output build error
 		size_t len;

@@ -3,6 +3,8 @@
 
 #include <cmath>
 #include <iostream>
+#include "compute/opencl.hpp"
+
 
 inline float sq (float x) {return x*x;}
 
@@ -20,7 +22,7 @@ public:
     Vec() : x(0), y(0) {}
     explicit Vec(T v) : x(v), y(v) {}
     explicit Vec(T x, T y) : x(x), y(y) {}
-    inline T &operator[] (int i) {return data[i];}
+	inline T &operator[] (int i) {return data[i];}
     inline const T &operator[] (int i) const {return data[i];}
 };
 
@@ -33,7 +35,7 @@ public:
     Vec() : x(0), y(0) {}
     explicit Vec(T v) : x(v), y(v), z(v) {}
     explicit Vec(T x, T y, T z) : x(x), y(y), z(z) {}
-    inline T &operator[] (int i) {return data[i];}
+	inline T &operator[] (int i) { return data[i]; }
     inline const T &operator[] (int i) const {return data[i];}
 };
 
@@ -46,7 +48,7 @@ public:
     Vec() : x(0), y(0) {}
     explicit Vec(T v) : x(v), y(v), z(v), w(v) {}
     explicit Vec(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
-    inline T &operator[] (int i) {return data[i];}
+	inline T &operator[] (int i) {return data[i];}
     inline const T &operator[] (int i) const {return data[i];}
 };
 
@@ -75,6 +77,12 @@ template <typename T> Vec<2,T> perp (const Vec<2,T> &u) {return Vec<2,T>(-u[1],u
 tpl VecnT elmult(const VecnT& a, const VecnT& b) { VecnT c; for (int i=0; i<n; i++) c[i] = a[i]*b[i]; return c; }
 template<int n> Vec<n> toVec(const Vec<n,int>& v) { Vec<n> a; for (int i=0; i<n; i++) a[i] = v[i]; return a; }
 template<int n> Vec<n, int> toVeci(const Vec<n>& v) { Vec<n, int> a; for (int i=0; i<n; i++) a[i] = floor(v[i]); return a; }
+inline Vec<2> toVec2(const cl_float2& c) { return Vec<2>(c.x, c.y); }
+inline Vec<3> toVec3(const cl_float3& c) { return Vec<3>(c.x, c.y, c.z); }
+inline Vec<4> toVec4(const cl_float4& c) { return Vec<4>(c.x, c.y, c.z, c.w); }
+inline Vec<2> toVec2(const cl_uint2& c) { return Vec<2>((float)c.x, (float)c.y); }
+inline Vec<3> toVec3(const cl_uint3& c) { return Vec<3>((float)c.x, (float)c.y, (float)c.z); }
+inline Vec<4> toVec4(const cl_uint4& c) { return Vec<4>((float)c.x, (float)c.y, (float)c.z, (float)c.w); }
 
 #undef tpl
 #undef VecnT

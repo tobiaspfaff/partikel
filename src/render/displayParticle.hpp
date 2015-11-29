@@ -18,15 +18,17 @@ struct DisplayPartInfo
 class DisplayParticle
 {
 public:
-	DisplayParticle(CLQueue& queue, const Vec2& domainMin, const Vec2& domainMax, GLWindow& window);
+	DisplayParticle(CLQueue& queue, const Domain& domain, GLWindow& window);
 
 	void attach(DynamicParticles* part, const std::string& name);
 	void render();
 	void compute();
+	void setRadius(float R) { radius = R; }
 protected:
 	void changePart();
 	bool keyHandler(int key, int mods);
 
+	float radius;
 	GLWindow& window;
 	Vec2 domainMin;
 	Vec2 domainMax;

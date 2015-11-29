@@ -1,3 +1,5 @@
+#include "particle.h"
+
 // Basic particle dynamics
 
 __kernel void predictPosition(
@@ -50,16 +52,15 @@ __kernel void finalAdvect(
 __kernel void prepareList(
 	__global float* px, __global float* py,
 	__global uint* hash, __global uint* part, 
-	uint2 gridSize, uint num)
+	struct Domain domain, uint num)
 {
 	size_t tid = get_global_id(0);
 	if (tid >= num)
 		return;
 
+	int2 pos = getGridPos(px[tid], py[tid], domain);
+	hash[tid] = getGridHash(pos, domain.size);
 	part[tid] = tid;
-	int x = clamp((int)px[tid], 0, (int)gridSize.x - 1);
-	int y = clamp((int)py[tid], 0, (int)gridSize.y - 1);
-	hash[tid] = ((uint)x) + ((uint)y) * gridSize.x;
 }
 
 __kernel void calcCellBoundsAndReorder(

@@ -5,8 +5,8 @@
 
 using namespace std;
 
-DisplayParticle::DisplayParticle(CLQueue& queue, const Vec2& domainMin, const Vec2& domainMax, GLWindow& window) :
-	window(window), domainMin(domainMin), domainMax(domainMax), queue(queue)
+DisplayParticle::DisplayParticle(CLQueue& queue, const Domain& domain, GLWindow& window) :
+	window(window), domainMin(toVec2(domain.offset)), domainMax(toVec2(domain.offset) + toVec2(domain.size)*domain.dx), queue(queue)
 {
 	// display buffers
 	vaPart = make_unique<SingleVertexArray>();
@@ -56,7 +56,7 @@ void DisplayParticle::render()
 		vaPart->defineAttrib(0, GL_FLOAT, 1, 0, 0);
 		vaPart->defineAttrib(1, GL_FLOAT, 1, 0, sizeof(float) * part->size);
 		particleShader->use();
-		uniformBillboardSize.set(0.5f);
+		uniformBillboardSize.set(radius);
 		uniformScale.set(Vec2(2.0f / domainMax.x, 2.0f / domainMax.y));
 		glDrawArrays(GL_POINTS, 0, (GLsizei)part->size);
 	}
