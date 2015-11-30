@@ -61,42 +61,42 @@ __kernel void collide(
 
 __kernel void wallCollideAndApply(
 	__global float2* q,
-	__global float2* d, 
+	__global float2* d,
+	__global float2* v,
 	__global uint* count,
+	float invdt,
 	float R, struct Domain domain, float omega, uint num)
 {
 	uint tid = get_global_id(0);
 	if (tid >= num)
 		return;
 
-	float x0 = q[tid].x, y0 = q[tid].y;
-	float x = x0 - domain.offset.x - R;
-	float y = y0 - domain.offset.y - R;
-	float tx = d[tid].x;
-	float ty = d[tid].y;
+	float2 p0 = q[tid];
+	float2 pos = p0 - domain.offset - R;
+	float2 delta = d[tid];
 	int cnt = count[tid];
-	float sx = domain.size.x * domain.dx - 2 * R;
-	float sy = domain.size.y * domain.dx - 2 * R;
+	float2 size = convert_float2(domain.size) * domain.dx - 2 * R;
 	
 	// wall collision
-	if (x < 0) {
-		tx -= x;
+	if (pos.x < 0) {
+		delta.x -= pos.x;
 		cnt++;
 	}
-	else if (x > sx) {
-		tx += sx - x;
+	else if (pos.x > size.x) {
+		delta.x += size.x - pos.x;
 		cnt++;
 	}
-	if (y < 0) {
-		ty -= y;
+	if (pos.y < 0) {
+		delta.y -= pos.y;
 		cnt++;
 	}
-	else if (y > sy) {
-		ty += sy - y;
+	else if (pos.y > size.y) {
+		delta.y += size.y - pos.y;
 		cnt++;
 	}
 
 	// apply SOR Jacobi
 	float corr = (cnt == 0) ? 0.0f : (omega / (float)cnt);
-	q[tid] = (float2)(x0 + tx * corr, y0 + ty * corr);
+	q[tid] = p0 + delta * corr;
+	v[tid] += (invdt * corr) * delta;
 }

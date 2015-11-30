@@ -50,7 +50,7 @@ int main()
 
 	// Particles
 	const float R = 0.01f;
-	Domain domain = { { 0, 0 }, {512, 512}, 2*R };
+	Domain domain = { { 0, 0 }, {1024, 1024}, 2*R };
 	auto part1 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
 	auto part2 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
 	seedRandom(*part1, domain, 0.5f, 0.01f);
@@ -83,9 +83,9 @@ int main()
 
 	int numIter = 4;
 
-	float dt = 1.0f / 60.0f * 1.0f;
+	float dt = 1.0f / 60.0f * 0.1f;
 	const int wgSize = 64;
-	const int substeps = 18;
+	const int substeps = 3;
 	const int subcols = 1;
 	const int citer = 5;
 
@@ -115,8 +115,8 @@ int main()
 				cellStart.fill(0xFFFFFFFFU);
 				LocalBlock local((wgSize + 1) * sizeof(cl_uint));
 				clCalcCellBounds.call(parts, wgSize, sortArray, cellStart, cellEnd, local, parts,
-					cur->p, cur->q, cur->invmass, cur->phase,
-					alt->p, alt->q, alt->invmass, alt->phase);
+					cur->p, cur->q, cur->v, cur->invmass, cur->phase,
+					alt->p, alt->q, alt->v, alt->invmass, alt->phase);
 				clEnqueueBarrier(queue.handle);
 				swap(cur, alt);
 
@@ -137,14 +137,14 @@ int main()
 
 					// add wall collision constraints, apply SOR Jacobi
 					clWallCollide.call(parts, wgSize, cur->q,
-						delta, counter, R, domain, SOR, parts);
+						delta, cur->v, counter, 1.0f / localDt, R, domain, SOR, parts);
 					clEnqueueBarrier(queue.handle);
 				}
 			}
 
 			// apply position delta
-			clAdvect.call(parts, wgSize, cur->p, cur->q,
-				alt->p, alt->q, 1.0f / localDt, parts);
+			clAdvect.call(parts, wgSize, cur->q, cur->v,
+				alt->p, alt->v, 1.0f / localDt, parts);
 			clEnqueueBarrier(queue.handle);
 			swap(cur, alt);			
 		}

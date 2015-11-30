@@ -11,7 +11,7 @@ __kernel void predictPosition(
 	if (tid >= num)
 		return;
 	
-	float2 vel = q[tid];
+	float2 vel = v[tid];
 	float2 pos = p[tid];
 
 	// apply gravity
@@ -19,11 +19,13 @@ __kernel void predictPosition(
 
 	// predict x star
 	q[tid] = pos + dt * vel;
+	v[tid] = vel;
 }
 
 __kernel void finalAdvect(
-	__global float2* p, // in: pos
-	__global float2* q, // in: xstar
+	__global float2* q, // in: pos
+	//__global float2* q, // in: xstar
+	__global float2* v, // in: velocity
 	__global float2* np, // out: pos
 	__global float2* nv, // out: velocity
 	float inv_dt, uint num)
@@ -33,16 +35,16 @@ __kernel void finalAdvect(
 		return;
 
 	float2 xstar = q[tid];
-	float2 pos = p[tid];
+	//float2 pos = p[tid];
 	
 	// update velocity
-	float2 vel = inv_dt * (xstar - pos);
+	//float2 vel = inv_dt * (xstar - pos);
 	//vx *= 0.9f;
 	//vy *= 0.9f;
 	
 	// set new position and velocity
 	np[tid] = xstar;
-	nv[tid] = vel;
+	nv[tid] = v[tid];
 }
 
 __kernel void prepareList(
@@ -64,9 +66,11 @@ __kernel void calcCellBoundsAndReorder(
 	__local uint* localHash, uint num,
 	__global float2* p,
 	__global float2* q,
+	__global float2* v,
 	__global float* im, __global uint* ph,
 	__global float2* p2,
 	__global float2* q2,
+	__global float2* v2,
 	__global float* im2, __global uint* ph2)
 {
 	const uint tid = get_global_id(0);
@@ -109,6 +113,7 @@ __kernel void calcCellBoundsAndReorder(
 
 		p2[tid] = p[sortedIndex];
 		q2[tid] = q[sortedIndex];
+		v2[tid] = v[sortedIndex];
 		im2[tid] = im[sortedIndex];
 		ph2[tid] = ph[sortedIndex];
 	}
