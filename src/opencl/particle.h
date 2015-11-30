@@ -6,10 +6,10 @@ struct Domain {
 	float pad;
 };
 
-inline int2 getGridPos(float px, float py, struct Domain domain)
+inline int2 getGridPos(float2 p, struct Domain domain)
 {
-	float x = (px - domain.offset.x) / domain.dx;
-	float y = (py - domain.offset.y) / domain.dx;
+	float x = (p.x - domain.offset.x) / domain.dx;
+	float y = (p.y - domain.offset.y) / domain.dx;
 	return (int2)((int)x, (int)y);
 }
 

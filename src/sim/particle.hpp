@@ -29,8 +29,7 @@ public:
 	void download();
 	void setSize(int nsize);
 	
-	CLBuffer<cl_float> px, py;
-	CLBuffer<cl_float> qx, qy;
+	CLBuffer<cl_float2> p, q, v;
 	CLBuffer<cl_float> invmass;
 	CLBuffer<cl_int> phase;
 };

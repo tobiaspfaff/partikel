@@ -3,54 +3,50 @@
 // Basic particle dynamics
 
 __kernel void predictPosition(
-	__global float* px, __global float* py, 
-	__global float* qx, __global float* qy, // in: velocity, out: xstar
+	__global float2* p, __global float2* q, 
+	__global float2* v,
 	float dt, uint num)
 {
 	size_t tid = get_global_id(0);
 	if (tid >= num)
 		return;
 	
-	float vx = qx[tid], vy = qy[tid];
-	float x = px[tid], y = py[tid];
+	float2 vel = q[tid];
+	float2 pos = p[tid];
 
 	// apply gravity
-	vy += dt * -9.81;
+	vel.y += dt * -9.81;
 
 	// predict x star
-	qx[tid] = x + dt * vx;
-	qy[tid] = y + dt * vy;
+	q[tid] = pos + dt * vel;
 }
 
 __kernel void finalAdvect(
-	__global float* px, __global float* py, // in: pos
-	__global float* qx, __global float* qy, // in: xstar
-	__global float* npx, __global float* npy, // out: pos
-	__global float* nvx, __global float* nvy, // out: velocity
+	__global float2* p, // in: pos
+	__global float2* q, // in: xstar
+	__global float2* np, // out: pos
+	__global float2* nv, // out: velocity
 	float inv_dt, uint num)
 {
 	size_t tid = get_global_id(0);
 	if (tid >= num)
 		return;
 
-	float xs = qx[tid], ys = qy[tid];
-	float x = px[tid], y = py[tid];
+	float2 xstar = q[tid];
+	float2 pos = p[tid];
 	
 	// update velocity
-	float vx = inv_dt * (xs - x);
-	float vy = inv_dt * (ys - y);
+	float2 vel = inv_dt * (xstar - pos);
 	//vx *= 0.9f;
 	//vy *= 0.9f;
 	
 	// set new position and velocity
-	npx[tid] = xs;
-	npy[tid] = ys;
-	nvx[tid] = vx;
-	nvy[tid] = vy;
+	np[tid] = xstar;
+	nv[tid] = vel;
 }
 
 __kernel void prepareList(
-	__global float* px, __global float* py,
+	__global float2* p,
 	__global uint2* sortArray,
 	struct Domain domain, uint num)
 {
@@ -58,7 +54,7 @@ __kernel void prepareList(
 	if (tid >= num)
 		return;
 
-	int2 pos = getGridPos(px[tid], py[tid], domain);
+	int2 pos = getGridPos(p[tid], domain);
 	sortArray[tid] = (uint2)(getGridHash(pos, domain.size), tid);
 }
 
@@ -66,11 +62,11 @@ __kernel void calcCellBoundsAndReorder(
 	__global uint2* sortArray,
 	__global uint* cellStart, __global uint* cellEnd,
 	__local uint* localHash, uint num,
-	__global float* px, __global float* py, 
-	__global float* qx, __global float* qy,
+	__global float2* p,
+	__global float2* q,
 	__global float* im, __global uint* ph,
-	__global float* px2, __global float* py2,
-	__global float* qx2, __global float* qy2,
+	__global float2* p2,
+	__global float2* q2,
 	__global float* im2, __global uint* ph2)
 {
 	const uint tid = get_global_id(0);
@@ -111,10 +107,8 @@ __kernel void calcCellBoundsAndReorder(
 		//Now use the sorted index to reorder the pos and vel arrays
 		uint sortedIndex = sortArray[tid].y;
 
-		px2[tid] = px[sortedIndex];
-		py2[tid] = py[sortedIndex];
-		qx2[tid] = qx[sortedIndex];
-		qy2[tid] = qy[sortedIndex];
+		p2[tid] = p[sortedIndex];
+		q2[tid] = q[sortedIndex];
 		im2[tid] = im[sortedIndex];
 		ph2[tid] = ph[sortedIndex];
 	}

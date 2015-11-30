@@ -36,11 +36,10 @@ void DisplayParticle::compute()
 		
 		if (part->size > 0)
 		{
-			size_t offset = part->size * sizeof(float);
+			size_t size = part->size * sizeof(cl_float2);
 			clPart->grow(part->size * 2);
 			clPart->acquire();
-			clTest(clEnqueueCopyBuffer(queue.handle, part->px.handle, clPart->handle, 0, 0, offset, 0, 0, 0), "buffer copy x");
-			clTest(clEnqueueCopyBuffer(queue.handle, part->py.handle, clPart->handle, 0, offset, offset, 0, 0, 0), "buffer copy y");
+			clTest(clEnqueueCopyBuffer(queue.handle, part->p.handle, clPart->handle, 0, 0, size, 0, 0, 0), "buffer copy x");
 			clPart->release();
 		}
 	}
@@ -53,8 +52,7 @@ void DisplayParticle::render()
 	{
 		DynamicParticles* part = displayPartList[curSystem].part;
 		vaPart->bind();
-		vaPart->defineAttrib(0, GL_FLOAT, 1, 0, 0);
-		vaPart->defineAttrib(1, GL_FLOAT, 1, 0, sizeof(float) * part->size);
+		vaPart->defineAttrib(0, GL_FLOAT, 2, 0, 0);
 		particleShader->use();
 		uniformBillboardSize.set(radius);
 		uniformScale.set(Vec2(2.0f / domainMax.x, 2.0f / domainMax.y));

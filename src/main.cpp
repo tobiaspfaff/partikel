@@ -100,12 +100,12 @@ int main()
 
 		for (int substep = 0; substep < substeps; substep++) {
 			// Predict particle position, apply gravity
-			clPredict.call(parts, wgSize, cur->px, cur->py, cur->qx, cur->qy, localDt, parts);
+			clPredict.call(parts, wgSize, cur->p, cur->q, cur->v, localDt, parts);
 			clEnqueueBarrier(queue.handle);
 
 			for (int subcol = 0; subcol < subcols; subcol++) {
 				// Sort particles by cell hash
-				clPrepareList.call(parts, wgSize, cur->qx, cur->qy, sortArray, domain, parts);
+				clPrepareList.call(parts, wgSize, cur->q, sortArray, domain, parts);
 				clEnqueueBarrier(queue.handle);
 				//sorter.sort(hash, hashSorted, particleIndex, particleIndexSorted, parts);
 				sorter.sort(sortArray, parts);
@@ -115,38 +115,36 @@ int main()
 				cellStart.fill(0xFFFFFFFFU);
 				LocalBlock local((wgSize + 1) * sizeof(cl_uint));
 				clCalcCellBounds.call(parts, wgSize, sortArray, cellStart, cellEnd, local, parts,
-					cur->px, cur->py, cur->qx, cur->qy, cur->invmass, cur->phase,
-					alt->px, alt->py, alt->qx, alt->qy, alt->invmass, alt->phase);
+					cur->p, cur->q, cur->invmass, cur->phase,
+					alt->p, alt->q, alt->invmass, alt->phase);
 				clEnqueueBarrier(queue.handle);
 				swap(cur, alt);
 
 				// iterate on constraints
 				for (int iter = 0; iter < citer; iter++)
 				{
-					auto& deltaX = alt->qx;
-					auto& deltaY = alt->qy;
+					auto& delta = alt->q;
 					auto& counter = alt->phase;
 					counter.fill(0);
-					deltaX.fill(0);
-					deltaY.fill(0);
+					delta.fill({ 0, 0 });
 					clEnqueueBarrier(queue.handle);
 
 					// particle - particle collisions
 					const float SOR = 1.8f;
-					clCollide.call(parts, wgSize, cur->qx, cur->qy, deltaX, deltaY, cellStart, cellEnd,
+					clCollide.call(parts, wgSize, cur->q, delta, cellStart, cellEnd,
 						cur->invmass, counter, R, domain, parts);
 					clEnqueueBarrier(queue.handle);
 
 					// add wall collision constraints, apply SOR Jacobi
-					clWallCollide.call(parts, wgSize, cur->qx, cur->qy,
-						deltaX, deltaY, counter, R, domain, SOR, parts);
+					clWallCollide.call(parts, wgSize, cur->q,
+						delta, counter, R, domain, SOR, parts);
 					clEnqueueBarrier(queue.handle);
 				}
 			}
 
 			// apply position delta
-			clAdvect.call(parts, wgSize, cur->px, cur->py, cur->qx, cur->qy,
-				alt->px, alt->py, alt->qx, alt->qy, 1.0f / localDt, parts);
+			clAdvect.call(parts, wgSize, cur->p, cur->q,
+				alt->p, alt->q, 1.0f / localDt, parts);
 			clEnqueueBarrier(queue.handle);
 			swap(cur, alt);			
 		}

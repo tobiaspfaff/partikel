@@ -228,6 +228,12 @@ inline void CLKernel::setArg<CLBuffer<cl_float> >(int idx, const CLBuffer<cl_flo
 }
 
 template<>
+inline void CLKernel::setArg<CLBuffer<cl_float2> >(int idx, const CLBuffer<cl_float2>& value)
+{
+	clTest(clSetKernelArg(handle, idx, sizeof(cl_mem), (void*)&value.handle), "set arg");
+}
+
+template<>
 inline void CLKernel::setArg<CLBuffer<cl_uint2> >(int idx, const CLBuffer<cl_uint2>& value)
 {
 	clTest(clSetKernelArg(handle, idx, sizeof(cl_mem), (void*)&value.handle), "set arg");

@@ -1,8 +1,8 @@
 #include "particle.h"
 
 __kernel void collide(
-	__global float* qx, __global float* qy,
-	__global float* dx, __global float* dy,
+	__global float2* q,
+	__global float2* d,
 	__global uint* cellStart, __global uint* cellEnd,
 	__global float* weight, __global uint* count,
 	float radius, struct Domain domain, uint num)
@@ -12,9 +12,9 @@ __kernel void collide(
 		return;
 
 	uint cnt = count[tid];
-	float2 delta = (float2)(dx[tid], dy[tid]);
-	float2 pos1  = (float2)(qx[tid], qy[tid]);
-	int2 cell = getGridPos(pos1.x, pos1.y, domain);
+	float2 delta = d[tid];
+	float2 pos1 = q[tid];
+	int2 cell = getGridPos(pos1, domain);
 
 	float R2 = 4.0 * radius * radius;
 
@@ -36,7 +36,7 @@ __kernel void collide(
 			if (j == tid)
 				continue;
 
-			float2 pos2 = (float2)(qx[j], qy[j]);
+			float2 pos2 = q[j];
 			float2 diff = pos1 - pos2;
 			float len2 = dot(diff, diff);
 
@@ -55,25 +55,25 @@ __kernel void collide(
 	}
 	
 	//printf("%d: %f %f %d\n", tid, delta.x, delta.y, cnt);
-	dx[tid] = delta.x;
-	dy[tid] = delta.y;
+	d[tid] = delta;
 	count[tid] = cnt;
 }
 
 __kernel void wallCollideAndApply(
-	__global float* qx, __global float* qy,
-	__global float* dx, __global float* dy, __global uint* count,
+	__global float2* q,
+	__global float2* d, 
+	__global uint* count,
 	float R, struct Domain domain, float omega, uint num)
 {
 	uint tid = get_global_id(0);
 	if (tid >= num)
 		return;
 
-	float x0 = qx[tid], y0 = qy[tid];
+	float x0 = q[tid].x, y0 = q[tid].y;
 	float x = x0 - domain.offset.x - R;
 	float y = y0 - domain.offset.y - R;
-	float tx = dx[tid];
-	float ty = dy[tid];
+	float tx = d[tid].x;
+	float ty = d[tid].y;
 	int cnt = count[tid];
 	float sx = domain.size.x * domain.dx - 2 * R;
 	float sy = domain.size.y * domain.dx - 2 * R;
@@ -98,6 +98,5 @@ __kernel void wallCollideAndApply(
 
 	// apply SOR Jacobi
 	float corr = (cnt == 0) ? 0.0f : (omega / (float)cnt);
-	qx[tid] = x0 + tx * corr;
-	qy[tid] = y0 + ty * corr;
+	q[tid] = (float2)(x0 + tx * corr, y0 + ty * corr);
 }
