@@ -40,12 +40,12 @@ void DynamicParticles::setSize(int nsize)
 	size = nsize;
 	if (size > reserve)
 	{
-		px.setSize(nsize);
-		py.setSize(nsize);
-		qx.setSize(nsize);
-		qy.setSize(nsize);
-		invmass.setSize(nsize);
-		phase.setSize(nsize);
+		px.resize(nsize);
+		py.resize(nsize);
+		qx.resize(nsize);
+		qy.resize(nsize);
+		invmass.resize(nsize);
+		phase.resize(nsize);
 		reserve = nsize;
 	}
 }

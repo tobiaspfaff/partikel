@@ -45,8 +45,9 @@ GLWindow::GLWindow(int width, int height)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	// Indicate we only want the newest core profile
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	// Create the window and context
 	window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
@@ -64,7 +65,7 @@ GLWindow::GLWindow(int width, int height)
 	glewExperimental = GL_TRUE;
 	glewInit();
 
-	glfwSwapInterval(1);
+	//glfwSwapInterval(10);
 }
 
 void GLWindow::clearBuffer() 
@@ -75,6 +76,8 @@ void GLWindow::clearBuffer()
 
 	static const GLfloat color[] = { 0.0f, 1.0f, 0.0f, 0.0f };
     glClearBufferfv(GL_COLOR, 0, color);
+	glEnable(GL_MULTISAMPLE);
+	glDisable(GL_DEPTH_TEST);
 	//glClear(GL_COLOR_BUFFER_BIT);
 }
 

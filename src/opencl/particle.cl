@@ -51,7 +51,7 @@ __kernel void finalAdvect(
 
 __kernel void prepareList(
 	__global float* px, __global float* py,
-	__global uint* hash, __global uint* part, 
+	__global uint2* sortArray,
 	struct Domain domain, uint num)
 {
 	size_t tid = get_global_id(0);
@@ -59,12 +59,11 @@ __kernel void prepareList(
 		return;
 
 	int2 pos = getGridPos(px[tid], py[tid], domain);
-	hash[tid] = getGridHash(pos, domain.size);
-	part[tid] = tid;
+	sortArray[tid] = (uint2)(getGridHash(pos, domain.size), tid);
 }
 
 __kernel void calcCellBoundsAndReorder(
-	__global uint* hash, __global uint* partIndex,
+	__global uint2* sortArray,
 	__global uint* cellStart, __global uint* cellEnd,
 	__local uint* localHash, uint num,
 	__global float* px, __global float* py, 
@@ -80,7 +79,7 @@ __kernel void calcCellBoundsAndReorder(
 
 	if (tid < num)
 	{
-		hash0 = hash[tid];
+		hash0 = sortArray[tid].x;
 
 		//Load hash data into local memory so that we can look 
 		//at neighboring particle's hash value without loading
@@ -89,7 +88,7 @@ __kernel void calcCellBoundsAndReorder(
 
 		//First thread in block must load neighbor particle hash
 		if (tid > 0 && loc == 0)
-			localHash[0] = hash[tid - 1];
+			localHash[0] = sortArray[tid - 1].x;
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -110,7 +109,7 @@ __kernel void calcCellBoundsAndReorder(
 			cellEnd[hash0] = num;
 
 		//Now use the sorted index to reorder the pos and vel arrays
-		uint sortedIndex = partIndex[tid];
+		uint sortedIndex = sortArray[tid].y;
 
 		px2[tid] = px[sortedIndex];
 		py2[tid] = py[sortedIndex];

@@ -56,3 +56,76 @@ void BitonicSort::sort(const CLBuffer<cl_uint>& keySrc, CLBuffer<cl_uint>& keyDe
 		}
 	}
 }
+
+
+RadixSort::RadixSort(CLQueue& queue) :
+	queue(queue),
+	streamCountSortDataKernel(queue, "RadixSort32Kernels.cl", "StreamCountSortDataKernel"),
+	prefixScanKernel(queue, "RadixSort32Kernels.cl", "PrefixScanKernel"),
+	sortAndScatterSortDataKernel(queue, "RadixSort32Kernels.cl", "SortAndScatterSortDataKernel"),
+	work(queue), workHisto(queue)
+{
+	work.type = BufferType::Gpu;
+	workHisto.type = BufferType::Gpu;
+}
+
+
+void RadixSort::sort(CLBuffer<cl_uint2>& data, int n)
+{
+	if (n % DATA_ALIGNMENT != 0)
+		fatalError("Data size needs to be aligned");
+	if (n > data.size)
+		fatalError("Search size > array size");
+	
+	work.resize(n);
+	CLBuffer<cl_uint2>* src = &data;
+	CLBuffer<cl_uint2>* dst = &work;
+	
+	int minCap = NUM_BUCKET * NUM_WGS;
+	workHisto.resize(minCap);
+	
+	//	ADLASSERT( ELEMENTS_PER_WORK_ITEM == 4 );
+	const int sortBits = 32;
+	assert(BITS_PER_PASS == 4);
+	assert(WG_SIZE == 64);
+	assert((sortBits & 0x3) == 0);
+	
+	int nWGs = NUM_WGS;
+	ConstData cdata;
+	{
+		int blockSize = ELEMENTS_PER_WORK_ITEM*WG_SIZE;//set at 256
+		int nBlocks = (n + blockSize - 1) / (blockSize);
+		cdata.m_n = n;
+		cdata.m_nWGs = NUM_WGS;
+		cdata.m_startBit = 0;
+		cdata.m_nBlocksPerWG = (nBlocks + cdata.m_nWGs - 1) / cdata.m_nWGs;
+		if (nBlocks < NUM_WGS)
+		{
+			cdata.m_nBlocksPerWG = 1;
+			nWGs = nBlocks;
+		}
+	}
+
+	int count = 0;
+	for (int ib = 0; ib < sortBits; ib += 4)
+	{
+		cdata.m_startBit = ib;
+		streamCountSortDataKernel.call(NUM_WGS*WG_SIZE, WG_SIZE, *src, workHisto, cdata);
+
+#ifdef __APPLE__
+		fatalError("fast prefix scan not supported on OSX");
+#endif		
+		prefixScanKernel.call(128, 128, workHisto, cdata);
+		
+		//local sort and distribute
+		sortAndScatterSortDataKernel.call(nWGs*WG_SIZE, WG_SIZE, *src, workHisto, *dst, cdata);
+		
+		swap(src, dst);
+		count++;
+	}
+
+	if (count & 1)
+	{
+		assert(0); //need to copy from work to data
+	}
+}

@@ -40,7 +40,7 @@ int main()
 {	
 	// Init Window
 	cout << "Partikel " << git_version_short << endl;
-	auto window = make_unique<GLWindow>(100 * 8, 100 * 8);
+	auto window = make_unique<GLWindow>(1000,1000);
 	window->keyHandlers.push_back(&keyHandler);
 	
 	// Init CL
@@ -49,8 +49,8 @@ int main()
 	auto& queue = gpuQueue;
 
 	// Particles
-	const float R = 0.1f;
-	Domain domain = { { 0, 0 }, {64, 64}, 2*R };
+	const float R = 0.01f;
+	Domain domain = { { 0, 0 }, {512, 512}, 2*R };
 	auto part1 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
 	auto part2 = make_unique<DynamicParticles>(1024, BufferType::Both, queue);
 	seedRandom(*part1, domain, 0.5f, 0.01f);
@@ -62,15 +62,11 @@ int main()
 	display.attach(part1.get(), "P0");
 	display.setRadius(R);
 
-	float dt = 1.0f/60.0f;
-	const int wgSize = 64;
-	
 	// Temporary buffers for sorting
 	int gridElems = domain.size.x * domain.size.y;
-	CLBuffer<cl_uint> hash(queue, max(gridElems,parts), BufferType::Both); // bigger, as it's reused as a hashgrid
-	CLBuffer<cl_uint> particleIndex(queue, max(gridElems,parts), BufferType::Both);
-	CLBuffer<cl_uint> hashSorted(queue, parts, BufferType::Both); // not re-used, only partsize
-	CLBuffer<cl_uint> particleIndexSorted(queue, parts, BufferType::Both);
+	CLBuffer<cl_uint> cellStart(queue, gridElems, BufferType::Gpu); // hashgrid
+	CLBuffer<cl_uint> cellEnd(queue, gridElems, BufferType::Gpu);
+	CLBuffer<cl_uint2> sortArray(queue, parts, BufferType::Gpu); // (hash, part.index)
 	
 	// Kernels
 	CLKernel clPredict(queue, "particle.cl", "predictPosition");
@@ -79,12 +75,20 @@ int main()
 	CLKernel clCalcCellBounds(queue, "particle.cl", "calcCellBoundsAndReorder");
 	CLKernel clCollide(queue, "collision.cl", "collide");
 	CLKernel clWallCollide(queue, "collision.cl", "wallCollideAndApply");
-	BitonicSort sorter(queue);
+	//BitonicSort sorter(queue);
+	RadixSort sorter(queue);
 
 	auto tex = make_unique<Texture>("circle.png");
 	tex->bind();
 
-	int numIter = 10;
+	int numIter = 4;
+
+	float dt = 1.0f / 60.0f * 1.0f;
+	const int wgSize = 64;
+	const int substeps = 18;
+	const int subcols = 1;
+	const int citer = 5;
+
 	while (window->poll())
 	{		
  		if (numIter-- <= 0 && 0)
@@ -92,7 +96,6 @@ int main()
 		glFinish();
 		auto cur = part1.get();
 		auto alt = part2.get();
-		const int substeps = 5;
 		float localDt = dt / substeps;
 
 		for (int substep = 0; substep < substeps; substep++) {
@@ -100,44 +103,45 @@ int main()
 			clPredict.call(parts, wgSize, cur->px, cur->py, cur->qx, cur->qy, localDt, parts);
 			clEnqueueBarrier(queue.handle);
 
-			// Sort particles by cell hash
-			clPrepareList.call(parts, wgSize, cur->qx, cur->qy, hash, particleIndex, domain, parts);
-			clEnqueueBarrier(queue.handle);
-			sorter.sort(hash, hashSorted, particleIndex, particleIndexSorted, parts);
-			clEnqueueBarrier(queue.handle);
-
-			// Re-order particles and collect neighborhood information
-			auto& cellStart = particleIndex;
-			auto& cellEnd = hash;
-			cellStart.fill(0xFFFFFFFFU);
-			LocalBlock local((wgSize + 1) * sizeof(cl_uint));
-			clCalcCellBounds.call(parts, wgSize, hashSorted, particleIndexSorted, cellStart, cellEnd, local, parts,
-				cur->px, cur->py, cur->qx, cur->qy, cur->invmass, cur->phase,
-				alt->px, alt->py, alt->qx, alt->qy, alt->invmass, alt->phase);
-			clEnqueueBarrier(queue.handle);
-			swap(cur, alt);
-
-			// iterate on constraints
-			for (int iter = 0; iter < 5; iter++)
-			{
-				auto& deltaX = alt->qx;
-				auto& deltaY = alt->qy;
-				auto& counter = hashSorted;
-				counter.fill(0);
-				deltaX.fill(0);
-				deltaY.fill(0);
+			for (int subcol = 0; subcol < subcols; subcol++) {
+				// Sort particles by cell hash
+				clPrepareList.call(parts, wgSize, cur->qx, cur->qy, sortArray, domain, parts);
+				clEnqueueBarrier(queue.handle);
+				//sorter.sort(hash, hashSorted, particleIndex, particleIndexSorted, parts);
+				sorter.sort(sortArray, parts);
 				clEnqueueBarrier(queue.handle);
 
-				// particle - particle collisions
-				const float SOR = 1.8f;
-				clCollide.call(parts, wgSize, cur->qx, cur->qy, deltaX, deltaY, cellStart, cellEnd,
-					cur->invmass, counter, R, domain, parts);
+				// Re-order particles and collect neighborhood information
+				cellStart.fill(0xFFFFFFFFU);
+				LocalBlock local((wgSize + 1) * sizeof(cl_uint));
+				clCalcCellBounds.call(parts, wgSize, sortArray, cellStart, cellEnd, local, parts,
+					cur->px, cur->py, cur->qx, cur->qy, cur->invmass, cur->phase,
+					alt->px, alt->py, alt->qx, alt->qy, alt->invmass, alt->phase);
 				clEnqueueBarrier(queue.handle);
+				swap(cur, alt);
 
-				// add wall collision constraints, apply SOR Jacobi
-				clWallCollide.call(parts, wgSize, cur->qx, cur->qy,
-					deltaX, deltaY, counter, R, domain, SOR, parts);
-				clEnqueueBarrier(queue.handle);
+				// iterate on constraints
+				for (int iter = 0; iter < citer; iter++)
+				{
+					auto& deltaX = alt->qx;
+					auto& deltaY = alt->qy;
+					auto& counter = alt->phase;
+					counter.fill(0);
+					deltaX.fill(0);
+					deltaY.fill(0);
+					clEnqueueBarrier(queue.handle);
+
+					// particle - particle collisions
+					const float SOR = 1.8f;
+					clCollide.call(parts, wgSize, cur->qx, cur->qy, deltaX, deltaY, cellStart, cellEnd,
+						cur->invmass, counter, R, domain, parts);
+					clEnqueueBarrier(queue.handle);
+
+					// add wall collision constraints, apply SOR Jacobi
+					clWallCollide.call(parts, wgSize, cur->qx, cur->qy,
+						deltaX, deltaY, counter, R, domain, SOR, parts);
+					clEnqueueBarrier(queue.handle);
+				}
 			}
 
 			// apply position delta

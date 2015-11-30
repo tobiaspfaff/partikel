@@ -51,7 +51,7 @@ public:
 	template<typename T, typename... Args> void setArgs(const T& value, const Args &... args);
 	template<typename T, typename... Args> void call(size_t problem_size, size_t local, const T& value, const Args &... args);
 	void enqueue(size_t problem_size, size_t local = 1);
-
+	
 	CLQueue& queue;
 	CLProgram& program;
 	cl_kernel handle;	
@@ -72,14 +72,15 @@ public:
 	void upload();
 	void download();
 	void swap(CLBuffer<T>& other);
-	void setSize(int nsize);
+	void resize(int nsize);
+	void reallocate(int nsize);
 	void fill(const T& value);
 
 	std::vector<T> buffer;
 	BufferType type = BufferType::None;
 	CLQueue& queue;
 	cl_mem handle = 0;
-	int size = 0;
+	size_t size = 0, reserve = 0;
 };
 
 template<class T>
@@ -95,13 +96,26 @@ public:
 	SingleVertexArray& vaLink;
 };
 
+template<class T>
+class CLConstBuffer
+{
+public:
+	CLConstBuffer(CLQueue& queue);
+	virtual ~CLConstBuffer();
+	void upload();
+	
+	T data;
+	CLQueue& queue;
+	cl_mem handle = 0;
+};
+
 // ------------------------------------
 // IMPLEMENTATION
 // ------------------------------------
 
 template<class T>
 CLBuffer<T>::CLBuffer(CLQueue& queue, int size, BufferType type) : 
-	queue(queue), size(size), type(type)
+	queue(queue), type(type), size(size), reserve(size)
 {
 	cl_int err;
 	if (type == BufferType::Gpu || type == BufferType::Both)
@@ -143,26 +157,38 @@ template<class T>
 void CLBuffer<T>::swap(CLBuffer<T>& other)
 {
 	assert(&queue == &other.queue);
-	assert(size == other.size);
+	assert(reserve == other.reserve);	
 	std::swap(handle, other.handle);
+	std::swap(size, other.size);
 	buffer.swap(other.buffer);
 }
 
 template<class T>
-void CLBuffer<T>::setSize(int nsize)
+void CLBuffer<T>::resize(int nsize)
+{
+	if (nsize > reserve)
+		reallocate(nsize);
+
+	this->size = nsize;
+}
+
+template<class T>
+void CLBuffer<T>::reallocate(int nreserve)
 {
 	cl_int err;
-	this->size = nsize;
 	if (type == BufferType::Gpu || type == BufferType::Both)
 	{
-		clReleaseMemObject(this->handle);
-		this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T)*size, nullptr, &err);
+		if (this->reserve > 0)
+			clReleaseMemObject(this->handle);
+		if (nreserve > 0)
+			this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T)*nreserve, nullptr, &err);
 		clTest(err, "create cl");
 	}
 	if (type == BufferType::Host || type == BufferType::Both)
 	{
-		buffer.resize(size);
+		buffer.resize(nreserve);
 	}
+	this->reserve = nreserve;	
 }
 
 template<class T>
@@ -178,6 +204,7 @@ CLVertexBuffer<T>::CLVertexBuffer(CLQueue& queue, SingleVertexArray& va) :
 	cl_int err;
 	this->type = BufferType::Gpu;
 	this->size = va.buffer.size / sizeof(T);
+	this->reserve = va.buffer.size / sizeof(T);
 	this->handle = clCreateFromGLBuffer(queue.context, CL_MEM_WRITE_ONLY, va.buffer.handle, &err);
 	clTest(err, "create cl/gl buffer");
 }
@@ -196,6 +223,12 @@ inline void CLKernel::setArg<LocalBlock>(int idx, const LocalBlock& value)
 
 template<>
 inline void CLKernel::setArg<CLBuffer<cl_float> >(int idx, const CLBuffer<cl_float>& value)
+{
+	clTest(clSetKernelArg(handle, idx, sizeof(cl_mem), (void*)&value.handle), "set arg");
+}
+
+template<>
+inline void CLKernel::setArg<CLBuffer<cl_uint2> >(int idx, const CLBuffer<cl_uint2>& value)
 {
 	clTest(clSetKernelArg(handle, idx, sizeof(cl_mem), (void*)&value.handle), "set arg");
 }
@@ -261,5 +294,28 @@ void CLVertexBuffer<T>::grow(int nsize)
 	this->handle = clCreateFromGLBuffer(queue.context, CL_MEM_WRITE_ONLY, vaLink.buffer.handle, &err);
 	clTest(err, "create from gl");
 }
+
+template<class T>
+CLConstBuffer<T>::CLConstBuffer(CLQueue& queue) : 
+	queue(queue) 
+{
+	cl_int err;
+	this->handle = clCreateBuffer(queue.context, CL_MEM_READ_WRITE, sizeof(T), nullptr, &err);
+	clTest(err, "create cl");
+}
+
+template<class T>
+void CLConstBuffer<T>::upload()
+{
+	clTest(clEnqueueWriteBuffer(queue.handle, handle, CL_TRUE, 0, sizeof(T),
+		&data, 0, nullptr, nullptr), "write const buffer");
+}
+
+template<class T>
+CLConstBuffer<T>::~CLConstBuffer()
+{
+	clReleaseMemObject(this->handle);
+}
+
 
 #endif

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <iterator>
+#include <algorithm>
 #include "render/opengl.hpp"
 #include "compute/computeMain.hpp"
 #include "tools/log.hpp"
@@ -286,9 +287,13 @@ CLKernel::CLKernel(CLQueue& queue, const string& filename, const string& kernel)
 	clTest(err, "Can't create kernel " + kernel);
 }
 
-void CLKernel::enqueue(size_t problem_size, size_t local) 
+void CLKernel::enqueue(size_t problem_size, size_t local)
 {
-	cl_int err = clEnqueueNDRangeKernel(queue.handle, handle, 1, nullptr, &problem_size, 
-										&local, 0, nullptr, nullptr);
+	// align blocks to multiples of local
+	size_t blocks = max((size_t)1, (problem_size / local) + (!(problem_size % local) ? 0 : 1));
+	problem_size = blocks * local;
+	
+	cl_int err = clEnqueueNDRangeKernel(queue.handle, handle, 1, nullptr, &problem_size,
+		&local, 0, nullptr, nullptr);
 	clTest(err, "Can't enqueue kernel");
 }
